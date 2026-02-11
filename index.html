@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finanças Pro - Vencimentos</title>
+    <title>Finanças Pro - Ultra</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .is-paid { opacity: 0.4; text-decoration: line-through; }
         .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        textarea { resize: none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div id="edit-modal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center">
-            <h4 class="font-bold text-slate-800 text-lg mb-2">Atualizar Recorrência</h4>
+            <h4 class="font-bold text-slate-800 text-lg mb-2">Atualizar Registro</h4>
+            <p class="text-sm text-slate-500 mb-6">Deseja aplicar a mudança em quais registros deste grupo?</p>
             <div class="flex flex-col gap-3">
                 <button onclick="confirmUpdate('single')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-semibold transition">Apenas este mês</button>
                 <button onclick="confirmUpdate('future')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition">Este e todos os próximos</button>
@@ -57,11 +59,13 @@
                     <form id="finance-form" class="space-y-4">
                         <input type="hidden" id="edit-id">
                         
-                        <input type="text" id="desc" placeholder="Descrição" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400" required>
+                        <input type="text" id="title" placeholder="Título (Ex: Aluguel)" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400" required>
                         
+                        <textarea id="obs" placeholder="Descrição/Observação (Opcional)" rows="2" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm"></textarea>
+
                         <div class="grid grid-cols-2 gap-3">
-                            <input type="number" id="amount" step="0.01" placeholder="Valor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
-                            <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                            <input type="number" id="amount" step="0.01" placeholder="Valor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400" required>
+                            <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm">
                                 <option value="saida">🔴 Saída</option>
                                 <option value="entrada">🟢 Entrada</option>
                             </select>
@@ -69,40 +73,34 @@
 
                         <div class="space-y-2">
                             <div class="flex justify-between items-center px-1">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Categoria</label>
-                                <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Criar Categoria</button>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label>
+                                <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase">+ Criar</button>
                             </div>
                             
                             <div id="new-category-field" class="hidden p-3 bg-blue-50 rounded-2xl border border-blue-100 space-y-2">
-                                <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                <div class="flex items-center gap-2">
-                                    <label class="text-[9px] font-bold text-blue-400 uppercase min-w-[80px]">Vencimento (Dia):</label>
-                                    <input type="number" id="custom-cat-due" min="1" max="31" placeholder="Ex: 10" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                </div>
-                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-500 text-white py-2 rounded-lg text-xs font-bold uppercase tracking-widest">Salvar Nova Categoria</button>
+                                <input type="text" id="custom-cat-name" placeholder="Nome" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
+                                <input type="number" id="custom-cat-due" min="1" max="31" placeholder="Dia de Vencimento" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
+                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-500 text-white py-2 rounded-lg text-xs font-bold uppercase">Salvar</button>
                             </div>
 
-                            <select id="category" onchange="applyCategoryDate()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium"></select>
+                            <select id="category" onchange="applyCategoryDate()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm"></select>
                         </div>
 
-                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3 text-center">
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
                             <div class="flex justify-around text-[10px] font-bold uppercase text-slate-500">
                                 <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="repeat" value="unica" checked> Única</label>
                                 <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="repeat" value="fixa"> Fixa</label>
                                 <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="repeat" value="parcelada"> Parcelada</label>
                             </div>
-                            <div id="parcelas-input" class="hidden pt-2 border-t border-slate-200">
-                                <input type="number" id="installments" min="1" value="1" placeholder="Nº de Parcelas" class="w-full p-2 rounded-lg border border-slate-200 text-sm">
+                            <div id="parcelas-input" class="hidden pt-2 border-t border-slate-200 text-center">
+                                <input type="number" id="installments" min="1" value="1" class="w-20 p-2 rounded-lg border border-slate-200 text-sm">
                             </div>
                         </div>
                         
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Data da Transação</label>
-                            <input type="date" id="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
-                        </div>
+                        <input type="date" id="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
 
                         <button type="submit" id="btn-save" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg hover:bg-black transition-all">Salvar Registro</button>
-                        <button type="button" id="btn-cancel" onclick="cancelEdit()" class="hidden w-full text-slate-400 text-xs font-bold py-2 uppercase text-center hover:text-slate-600 transition">Cancelar Edição</button>
+                        <button type="button" id="btn-cancel" onclick="cancelEdit()" class="hidden w-full text-slate-400 text-xs font-bold py-2 uppercase text-center">Cancelar</button>
                     </form>
                 </div>
             </div>
@@ -112,22 +110,17 @@
                     <table class="w-full text-left">
                         <tbody id="transaction-list" class="divide-y divide-slate-100"></tbody>
                     </table>
-                    <div id="empty-state" class="p-16 text-center text-slate-300 italic hidden">Nenhum registro encontrado.</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Armazenamos categorias como objetos para guardar o dia de vencimento
-        let categories = JSON.parse(localStorage.getItem('categories_v11')) || [
-            {name: 'Alimentação', dueDay: ''},
-            {name: 'Lazer', dueDay: ''},
-            {name: 'Salário', dueDay: ''},
-            {name: 'Moradia', dueDay: '05'},
-            {name: 'Saúde', dueDay: ''}
+        const DB_VER = 'v2026_final';
+        let categories = JSON.parse(localStorage.getItem('cats_'+DB_VER)) || [
+            {name: 'Alimentação', dueDay: ''}, {name: 'Lazer', dueDay: ''}, {name: 'Salário', dueDay: ''}, {name: 'Moradia', dueDay: '05'}
         ];
-        let transactions = JSON.parse(localStorage.getItem('finances_v11')) || [];
+        let transactions = JSON.parse(localStorage.getItem('data_'+DB_VER)) || [];
         let pendingEditData = null;
 
         const form = document.getElementById('finance-form');
@@ -143,7 +136,7 @@
 
         function updateCatSelect() {
             catSelect.innerHTML = categories.map(c => `<option value="${c.name}">${c.name} ${c.dueDay ? '(Dia '+c.dueDay+')' : ''}</option>`).join('');
-            localStorage.setItem('categories_v11', JSON.stringify(categories));
+            localStorage.setItem('cats_'+DB_VER, JSON.stringify(categories));
         }
 
         function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); }
@@ -151,24 +144,17 @@
         function saveNewCategory() {
             const name = document.getElementById('custom-cat-name').value.trim();
             const due = document.getElementById('custom-cat-due').value.trim();
-            
             if(name && !categories.find(c => c.name === name)) {
                 categories.push({ name, dueDay: due ? due.padStart(2, '0') : '' });
-                updateCatSelect();
-                catSelect.value = name;
-                applyCategoryDate(); // Aplica a data logo após criar
-                toggleNewCategory();
-                document.getElementById('custom-cat-name').value = '';
-                document.getElementById('custom-cat-due').value = '';
+                updateCatSelect(); catSelect.value = name; applyCategoryDate(); toggleNewCategory();
+                document.getElementById('custom-cat-name').value = ''; document.getElementById('custom-cat-due').value = '';
             }
         }
 
-        // FUNÇÃO QUE PREENCHE A DATA AUTOMATICAMENTE
         function applyCategoryDate() {
             const selectedCat = categories.find(c => c.name === catSelect.value);
             if (selectedCat && selectedCat.dueDay) {
                 const [year, month] = monthFilter.value.split('-');
-                // Define a data no formato YYYY-MM-DD
                 dateInput.value = `${year}-${month}-${selectedCat.dueDay}`;
             }
         }
@@ -202,38 +188,41 @@
                         <button onclick="togglePaid(${t.id})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200 text-transparent hover:border-emerald-300'}">✓</button>
                     </td>
                     <td class="px-2 py-5">
-                        <div class="text-sm font-bold flex items-center gap-2">${t.desc} ${t.total > 1 ? `<span class="text-[9px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded font-bold uppercase">${t.current}/${t.total}</span>`:''}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-tight">${t.category} • ${new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</div>
+                        <div class="text-sm font-bold flex items-center gap-2">${t.title} ${t.total > 1 ? `<span class="text-[9px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded font-bold uppercase">${t.current}/${t.total}</span>`:''}</div>
+                        ${t.obs ? `<div class="text-xs text-slate-500 italic mt-0.5">${t.obs}</div>` : ''}
+                        <div class="text-[10px] text-slate-400 uppercase font-bold mt-1">${t.category} • ${new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</div>
                     </td>
                     <td class="px-4 py-5 text-right font-bold ${t.type === 'entrada' ? 'text-emerald-500' : 'text-rose-500'}">
                         ${t.type === 'entrada' ? '+' : '-'} R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                     </td>
-                    <td class="px-4 py-5 text-right"><button onclick="editItem(${t.id})" class="text-slate-300 hover:text-blue-500 mr-2 transition-colors">✏️</button><button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500 transition-colors">🗑️</button></td>
+                    <td class="px-4 py-5 text-right">
+                        <button onclick="editItem(${t.id})" class="text-slate-300 hover:text-blue-500 mr-2 transition-colors">✏️</button>
+                        <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
+                    </td>
                 `;
                 list.appendChild(tr);
             });
 
             document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            const netBalance = inc - exp;
+            const net = inc - exp;
             const balanceEl = document.getElementById('monthly-net-balance');
-            balanceEl.innerText = `R$ ${netBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            balanceEl.classList.toggle('text-emerald-600', netBalance > 0);
-            balanceEl.classList.toggle('text-rose-600', netBalance < 0);
+            balanceEl.innerText = `R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            balanceEl.classList.toggle('text-emerald-600', net > 0);
+            balanceEl.classList.toggle('text-rose-600', net < 0);
             document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('empty-state').classList.toggle('hidden', filtered.length > 0);
-            localStorage.setItem('finances_v11', JSON.stringify(transactions));
+            localStorage.setItem('data_'+DB_VER, JSON.stringify(transactions));
         }
 
         form.onsubmit = (e) => {
             e.preventDefault();
             const editId = document.getElementById('edit-id').value;
             const repeatType = document.querySelector('input[name="repeat"]:checked').value;
-            const selectedType = typeSelect.value.includes('entrada') ? 'entrada' : 'saida';
             const data = {
-                desc: document.getElementById('desc').value,
+                title: document.getElementById('title').value,
+                obs: document.getElementById('obs').value,
                 amount: parseFloat(document.getElementById('amount').value),
-                type: selectedType,
+                type: typeSelect.value,
                 category: catSelect.value,
                 date: dateInput.value,
                 repeat: repeatType,
@@ -247,13 +236,13 @@
         };
 
         function saveNew(data) {
-            const groupId = Date.now();
+            const gid = Date.now();
             if (data.repeat === 'parcelada') {
                 for (let i = 0; i < data.total; i++) {
                     const d = new Date(data.date); d.setUTCMonth(d.getUTCMonth() + i);
-                    transactions.push({...data, id: groupId + i, groupId, date: d.toISOString().split('T')[0], current: i+1, paid: false});
+                    transactions.push({...data, id: gid + i, groupId: gid, date: d.toISOString().split('T')[0], current: i+1, paid: false});
                 }
-            } else { transactions.push({...data, id: groupId, groupId: data.repeat === 'fixa' ? groupId : null, current: 1, paid: false}); }
+            } else { transactions.push({...data, id: gid, groupId: data.repeat === 'fixa' ? gid : null, current: 1, paid: false}); }
             finishSubmit();
         }
 
@@ -269,20 +258,21 @@
         window.editItem = (id) => {
             const t = transactions.find(t => t.id === id);
             document.getElementById('edit-id').value = t.id;
-            document.getElementById('desc').value = t.desc;
+            document.getElementById('title').value = t.title;
+            document.getElementById('obs').value = t.obs || '';
             document.getElementById('amount').value = t.amount;
             dateInput.value = t.date;
             typeSelect.value = t.type;
             catSelect.value = t.category;
             document.querySelector(`input[name="repeat"][value="${t.repeat}"]`).checked = true;
             if(t.repeat === 'parcelada') { parcelasInput.classList.remove('hidden'); document.getElementById('installments').value = t.total; }
-            document.getElementById('form-title').innerText = "Editando Registro";
+            document.getElementById('form-title').innerText = "Editando";
             document.getElementById('btn-cancel').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         function finishSubmit() { form.reset(); cancelEdit(); render(); }
-        function closeModal() { modal.classList.add('hidden'); pendingEditData = null; }
+        function closeModal() { modal.classList.add('hidden'); }
         function cancelEdit() {
             document.getElementById('edit-id').value = '';
             document.getElementById('form-title').innerText = "Novo Registro";
@@ -293,13 +283,13 @@
 
         window.deleteItem = (id) => {
             const item = transactions.find(t => t.id === id);
-            if (item.groupId && confirm('Excluir esta e todas as futuras deste grupo?')) {
+            if (item.groupId && confirm('Excluir este e os próximos?')) {
                 transactions = transactions.filter(t => t.groupId !== item.groupId || t.date < item.date);
-            } else if (confirm('Excluir este registro?')) { transactions = transactions.filter(t => t.id !== id); }
+            } else if (confirm('Excluir?')) { transactions = transactions.filter(t => t.id !== id); }
             render();
         }
 
-        monthFilter.onchange = () => { render(); applyCategoryDate(); };
+        monthFilter.onchange = render;
         render();
     </script>
 </body>
