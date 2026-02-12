@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finanças Pro - Cloud</title>
+    <title>Finanças Pro - Categorias</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -20,31 +20,12 @@
             <input type="month" id="month-filter" class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 outline-none text-blue-600">
         </header>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-emerald-600 uppercase">🟢 Entradas</p>
-                <h2 id="total-income" class="text-xl font-bold text-emerald-700">R$ 0,00</h2>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-rose-600 uppercase">🔴 Saídas</p>
-                <h2 id="total-expense" class="text-xl font-bold text-rose-700">R$ 0,00</h2>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">📊 Saldo Líquido</p>
-                <h2 id="monthly-net-balance" class="text-xl font-bold text-slate-800">R$ 0,00</h2>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-amber-600 uppercase italic">🕒 A Pagar</p>
-                <h2 id="to-pay-balance" class="text-xl font-bold text-amber-700">R$ 0,00</h2>
-            </div>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-1">
                 <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-200 sticky top-8">
                     <form id="finance-form" class="space-y-4">
                         <input type="text" id="title" placeholder="Título" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
-                        <textarea id="description" placeholder="Descrição (Opcional)" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm"></textarea>
+                        
                         <div class="grid grid-cols-2 gap-3">
                             <input type="number" id="amount" step="0.01" placeholder="Valor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
                             <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold">
@@ -52,12 +33,28 @@
                                 <option value="entrada">🟢 Entrada</option>
                             </select>
                         </div>
-                        <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
-                            <option>Alimentação</option><option>Moradia</option><option>Salário</option><option>Lazer</option><option>Outros</option>
-                        </select>
+
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center px-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label>
+                                <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Criar nova</button>
+                            </div>
+                            
+                            <div id="new-category-field" class="hidden p-3 bg-blue-50 rounded-2xl border border-blue-100 space-y-2">
+                                <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
+                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-500 text-white py-2 rounded-lg text-xs font-bold uppercase">Adicionar</button>
+                            </div>
+
+                            <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
+                                <option>Alimentação</option>
+                                <option>Moradia</option>
+                                <option>Salário</option>
+                                <option>Lazer</option>
+                            </select>
+                        </div>
+
                         <input type="date" id="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
                         <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg hover:bg-black transition">Salvar na Nuvem</button>
-                        <div id="status-msg" class="text-[10px] text-center text-slate-500 font-bold uppercase mt-2"></div>
                     </form>
                 </div>
             </div>
@@ -79,16 +76,31 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let transactions = [];
-        const monthFilter = document.getElementById('month-filter');
-        monthFilter.value = new Date().toISOString().substring(0, 7);
+        
+        // --- LÓGICA DE CATEGORIAS ---
+        function toggleNewCategory() {
+            document.getElementById('new-category-field').classList.toggle('hidden');
+        }
 
+        function saveNewCategory() {
+            const name = document.getElementById('custom-cat-name').value.trim();
+            if (name) {
+                const select = document.getElementById('category');
+                const option = document.createElement('option');
+                option.text = name;
+                option.value = name;
+                select.add(option);
+                select.value = name; // Seleciona a nova automaticamente
+                toggleNewCategory();
+                document.getElementById('custom-cat-name').value = '';
+            }
+        }
+
+        // --- FUNÇÕES DO BANCO ---
         async function loadData() {
             document.getElementById('loading').classList.remove('hidden');
             const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: false });
-            if (!error) {
-                transactions = data;
-                render();
-            }
+            if (!error) { transactions = data; render(); }
             document.getElementById('loading').classList.add('hidden');
         }
 
@@ -96,24 +108,16 @@
             e.preventDefault();
             const payload = {
                 title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
                 amount: parseFloat(document.getElementById('amount').value),
                 type: document.getElementById('type').value,
                 category: document.getElementById('category').value,
                 date: document.getElementById('date').value,
                 paid: false
             };
-
-            document.getElementById('status-msg').innerText = "Enviando...";
             const { error } = await _supabase.from('transacoes').insert([payload]);
-            
-            if (error) {
-                console.error(error);
-                alert("Erro ao salvar! Verifique se a tabela 'transacoes' existe.");
-            } else {
+            if (!error) { 
                 document.getElementById('finance-form').reset();
-                document.getElementById('status-msg').innerText = "Sincronizado!";
-                loadData();
+                loadData(); 
             }
         }
 
@@ -122,30 +126,10 @@
             loadData();
         }
 
-        async function deleteItem(id) {
-            if(confirm("Excluir registro?")) {
-                await _supabase.from('transacoes').delete().eq('id', id);
-                loadData();
-            }
-        }
-
         function render() {
-            const [fY, fM] = monthFilter.value.split('-').map(Number);
             const list = document.getElementById('transaction-list');
             list.innerHTML = '';
-            
-            const filtered = transactions.filter(t => {
-                const d = new Date(t.date);
-                return d.getUTCFullYear() === fY && (d.getUTCMonth() + 1) === fM;
-            });
-
-            let inc = 0, exp = 0, toPay = 0;
-
-            filtered.forEach(t => {
-                const isInc = t.type === 'entrada';
-                isInc ? inc += t.amount : exp += t.amount;
-                if(!isInc && !t.paid) toPay += t.amount;
-
+            transactions.forEach(t => {
                 const tr = document.createElement('tr');
                 tr.className = `hover:bg-slate-50 ${t.paid ? 'is-paid' : ''}`;
                 tr.innerHTML = `
@@ -153,27 +137,18 @@
                         <button onclick="togglePaid(${t.id}, ${t.paid})" class="w-6 h-6 rounded-full border-2 ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">✓</button>
                     </td>
                     <td class="px-2 py-4">
-                        <div class="text-sm font-bold text-slate-800">${t.title}</div>
+                        <div class="text-sm font-bold">${t.title}</div>
                         <div class="text-[10px] text-slate-400 uppercase">${t.category} • ${t.date}</div>
                     </td>
-                    <td class="px-4 py-4 text-right font-bold ${isInc ? 'text-emerald-500' : 'text-rose-500'}">
-                        R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                    </td>
-                    <td class="px-4 py-4 text-right">
-                        <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
+                    <td class="px-4 py-4 text-right font-bold ${t.type === 'entrada' ? 'text-emerald-500' : 'text-rose-500'}">
+                        R$ ${t.amount.toLocaleString('pt-BR')}
                     </td>
                 `;
                 list.appendChild(tr);
             });
-
-            document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('monthly-net-balance').innerText = `R$ ${(inc - exp).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         }
 
         document.getElementById('finance-form').onsubmit = saveData;
-        monthFilter.onchange = render;
         loadData();
     </script>
 </body>
