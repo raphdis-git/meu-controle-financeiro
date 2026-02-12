@@ -3,50 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finanças Pro - Cloud Edition</title>
+    <title>Finanças Pro - Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .is-paid { opacity: 0.4; text-decoration: line-through; }
-        .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="edit-modal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center">
-            <h4 class="font-bold text-slate-800 text-lg mb-2">Atualizar Registro</h4>
-            <p class="text-sm text-slate-500 mb-6">Deseja aplicar a mudança em quais registros?</p>
-            <div class="flex flex-col gap-3">
-                <button onclick="confirmUpdate('single')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-semibold transition">Apenas este mês</button>
-                <button onclick="confirmUpdate('future')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition">Este e todos os próximos</button>
-                <button onclick="closeModal()" class="w-full text-slate-400 py-2 text-xs font-bold uppercase mt-2">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-10">
             <h1 class="text-2xl font-bold text-slate-800 tracking-tight">💰 Finanças Cloud</h1>
-            <input type="month" id="month-filter" class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 font-bold outline-none text-blue-600">
+            <input type="month" id="month-filter" class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 outline-none text-blue-600">
         </header>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
                 <p class="text-[10px] font-bold text-emerald-600 uppercase">🟢 Entradas</p>
                 <h2 id="total-income" class="text-xl font-bold text-emerald-700">R$ 0,00</h2>
             </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
                 <p class="text-[10px] font-bold text-rose-600 uppercase">🔴 Saídas</p>
                 <h2 id="total-expense" class="text-xl font-bold text-rose-700">R$ 0,00</h2>
             </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
                 <p class="text-[10px] font-bold text-slate-400 uppercase">📊 Saldo Líquido</p>
                 <h2 id="monthly-net-balance" class="text-xl font-bold text-slate-800">R$ 0,00</h2>
             </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
                 <p class="text-[10px] font-bold text-amber-600 uppercase italic">🕒 A Pagar</p>
                 <h2 id="to-pay-balance" class="text-xl font-bold text-amber-700">R$ 0,00</h2>
             </div>
@@ -56,10 +43,8 @@
             <div class="lg:col-span-1">
                 <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-200 sticky top-8">
                     <form id="finance-form" class="space-y-4">
-                        <input type="hidden" id="edit-id">
                         <input type="text" id="title" placeholder="Título" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
                         <textarea id="description" placeholder="Descrição (Opcional)" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm"></textarea>
-                        
                         <div class="grid grid-cols-2 gap-3">
                             <input type="number" id="amount" step="0.01" placeholder="Valor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
                             <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold">
@@ -67,35 +52,28 @@
                                 <option value="entrada">🟢 Entrada</option>
                             </select>
                         </div>
-
                         <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
-                            <option>Alimentação</option>
-                            <option>Moradia</option>
-                            <option>Salário</option>
-                            <option>Lazer</option>
+                            <option>Alimentação</option><option>Moradia</option><option>Salário</option><option>Lazer</option><option>Outros</option>
                         </select>
-
                         <input type="date" id="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
-
-                        <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg">Salvar na Nuvem</button>
-                        <div id="status-msg" class="text-[10px] text-center text-slate-400 font-bold uppercase mt-2"></div>
+                        <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg hover:bg-black transition">Salvar na Nuvem</button>
+                        <div id="status-msg" class="text-[10px] text-center text-slate-500 font-bold uppercase mt-2"></div>
                     </form>
                 </div>
             </div>
 
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table class="w-full">
+                    <table class="w-full text-left">
                         <tbody id="transaction-list" class="divide-y divide-slate-100"></tbody>
                     </table>
-                    <div id="loading" class="p-10 text-center text-slate-400">Carregando dados...</div>
+                    <div id="loading" class="p-10 text-center text-slate-400 font-bold uppercase text-xs">Sincronizando...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIGURAÇÃO DO SUPABASE (PREENCHA AQUI) ---
         const SUPABASE_URL = 'https://cxitsxuqxclucwdlwynp.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_bu8qGEMLijUsVzwQk0Of4w_30CJ2j-U';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -104,14 +82,10 @@
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
-        // --- 2. FUNÇÕES DE BANCO DE DADOS ---
         async function loadData() {
             document.getElementById('loading').classList.remove('hidden');
-            const { data, error } = await _supabase.from('transacoes').select('*');
-            if (error) {
-                console.error(error);
-                document.getElementById('status-msg').innerText = "Erro ao carregar banco!";
-            } else {
+            const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: false });
+            if (!error) {
                 transactions = data;
                 render();
             }
@@ -130,30 +104,31 @@
                 paid: false
             };
 
-            document.getElementById('status-msg').innerText = "Salvando...";
+            document.getElementById('status-msg').innerText = "Enviando...";
             const { error } = await _supabase.from('transacoes').insert([payload]);
             
-            if (error) alert("Erro ao salvar!");
-            else {
+            if (error) {
+                console.error(error);
+                alert("Erro ao salvar! Verifique se a tabela 'transacoes' existe.");
+            } else {
                 document.getElementById('finance-form').reset();
-                document.getElementById('status-msg').innerText = "Salvo com sucesso!";
+                document.getElementById('status-msg').innerText = "Sincronizado!";
                 loadData();
             }
         }
 
         async function togglePaid(id, currentStatus) {
-            const { error } = await _supabase.from('transacoes').update({ paid: !currentStatus }).eq('id', id);
-            if (!error) loadData();
+            await _supabase.from('transacoes').update({ paid: !currentStatus }).eq('id', id);
+            loadData();
         }
 
         async function deleteItem(id) {
-            if(confirm("Excluir registro permanentemente?")) {
-                const { error } = await _supabase.from('transacoes').delete().eq('id', id);
-                if (!error) loadData();
+            if(confirm("Excluir registro?")) {
+                await _supabase.from('transacoes').delete().eq('id', id);
+                loadData();
             }
         }
 
-        // --- 3. RENDERIZAÇÃO ---
         function render() {
             const [fY, fM] = monthFilter.value.split('-').map(Number);
             const list = document.getElementById('transaction-list');
@@ -182,7 +157,7 @@
                         <div class="text-[10px] text-slate-400 uppercase">${t.category} • ${t.date}</div>
                     </td>
                     <td class="px-4 py-4 text-right font-bold ${isInc ? 'text-emerald-500' : 'text-rose-500'}">
-                        R$ ${t.amount.toLocaleString('pt-BR')}
+                        R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                     </td>
                     <td class="px-4 py-4 text-right">
                         <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
@@ -191,18 +166,15 @@
                 list.appendChild(tr);
             });
 
-            document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR')}`;
-            document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR')}`;
-            document.getElementById('monthly-net-balance').innerText = `R$ ${(inc - exp).toLocaleString('pt-BR')}`;
-            document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR')}`;
+            document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('monthly-net-balance').innerText = `R$ ${(inc - exp).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         }
 
         document.getElementById('finance-form').onsubmit = saveData;
         monthFilter.onchange = render;
-
-        // Inicia carregando os dados
         loadData();
     </script>
 </body>
 </html>
-
