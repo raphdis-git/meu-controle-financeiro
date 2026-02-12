@@ -22,7 +22,7 @@
                 <h2 class="text-lg font-bold text-slate-800">Gerenciar Categorias</h2>
                 <button onclick="closeCatModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
             </div>
-            <div id="cat-manage-list" class="space-y-3 max-h-60 overflow-y-auto pr-2 mb-6">
+            <div id="cat-manage-list" class="space-y-3 max-h-60 overflow-y-auto pr-2 mb-6 text-sm">
                 </div>
             <p class="text-[10px] text-slate-400 leading-tight uppercase font-bold">Nota: Ao renomear, todas as transações antigas dessa categoria serão atualizadas.</p>
         </div>
@@ -119,19 +119,24 @@
 
         let transactions = [];
         let editingId = null;
-        let categories = ["Alimentação", "Moradia", "Salário", "Lazer", "Saúde", "Transporte", "Outros"];
+        let baseCategories = ["Alimentação", "Moradia", "Salário", "Lazer", "Saúde", "Transporte", "Outros"];
         
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
         // --- GESTÃO DE CATEGORIAS ---
+        function getUniqueCategories() {
+            // Unir categorias base com categorias existentes no banco e ordenar alfabeticamente
+            const fromData = transactions.map(t => t.category);
+            return [...new Set([...baseCategories, ...fromData])].sort((a, b) => a.localeCompare(b));
+        }
+
         function openCatModal() {
             const list = document.getElementById('cat-manage-list');
             list.innerHTML = '';
-            // Pega categorias únicas das transações + as fixas
-            const uniqueCats = [...new Set([...categories, ...transactions.map(t => t.category)])].sort();
+            const sortedCats = getUniqueCategories();
             
-            uniqueCats.forEach(cat => {
+            sortedCats.forEach(cat => {
                 const div = document.createElement('div');
                 div.className = "flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-100";
                 div.innerHTML = `
@@ -152,7 +157,7 @@
             if(confirm(`Mudar todas as transações de "${oldName}" para "${newName}"?`)) {
                 const { error } = await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName);
                 if (!error) {
-                    categories = categories.map(c => c === oldName ? newName : c);
+                    baseCategories = baseCategories.map(c => c === oldName ? newName : c);
                     await loadData();
                     closeCatModal();
                 }
@@ -163,20 +168,23 @@
             const select = document.getElementById('category');
             const currentVal = select.value;
             select.innerHTML = '';
-            const allCats = [...new Set([...categories, ...transactions.map(t => t.category)])].sort();
-            allCats.forEach(cat => {
+            
+            // ORDEM ALFABÉTICA NO DROPDOWN
+            const sortedCats = getUniqueCategories();
+            
+            sortedCats.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = opt.text = cat;
                 select.add(opt);
             });
-            if(allCats.includes(currentVal)) select.value = currentVal;
+            if(sortedCats.includes(currentVal)) select.value = currentVal;
         }
 
         function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); }
         function saveNewCategory() {
             const name = document.getElementById('custom-cat-name').value.trim();
             if (name) {
-                categories.push(name);
+                baseCategories.push(name);
                 updateCategoryDropdown();
                 document.getElementById('category').value = name;
                 toggleNewCategory();
@@ -188,7 +196,11 @@
         async function loadData() {
             document.getElementById('loading').classList.remove('hidden');
             const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: false });
-            if (!error) { transactions = data; updateCategoryDropdown(); render(); }
+            if (!error) { 
+                transactions = data; 
+                updateCategoryDropdown(); 
+                render(); 
+            }
             document.getElementById('loading').classList.add('hidden');
         }
 
@@ -253,6 +265,7 @@
                     const valor = Number(t.amount);
                     const isEntrada = t.type.toLowerCase().includes('entrada');
                     const estaPago = (t.paid === true || t.paid === 'true');
+                    
                     if (!categoriesMap[t.category]) categoriesMap[t.category] = 0;
                     if (isEntrada) { inc += valor; categoriesMap[t.category] += valor; } 
                     else { exp += valor; categoriesMap[t.category] -= valor; if (!estaPago) toPay += valor; }
@@ -276,7 +289,10 @@
                 }
             });
 
-            Object.keys(categoriesMap).forEach(cat => {
+            // RELATÓRIO EM ORDEM ALFABÉTICA
+            const sortedReportCats = Object.keys(categoriesMap).sort((a, b) => a.localeCompare(b));
+            
+            sortedReportCats.forEach(cat => {
                 const totalCat = categoriesMap[cat];
                 const card = document.createElement('div');
                 card.className = "p-3 rounded-2xl border border-slate-100 bg-slate-50";
