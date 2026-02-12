@@ -10,23 +10,9 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .is-paid { opacity: 0.4; text-decoration: line-through; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal.active { display: flex; }
     </style>
 </head>
 <body class="p-4 md:p-8">
-
-    <div id="cat-modal" class="modal">
-        <div class="bg-white w-full max-w-md p-6 rounded-3xl shadow-2xl mx-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-slate-800">Gerenciar Categorias</h2>
-                <button onclick="closeCatModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-            </div>
-            <div id="cat-manage-list" class="space-y-3 max-h-60 overflow-y-auto pr-2 mb-6 text-sm">
-                </div>
-            <p class="text-[10px] text-slate-400 leading-tight uppercase font-bold">Nota: Ao renomear, todas as transações antigas dessa categoria serão atualizadas.</p>
-        </div>
-    </div>
 
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-10">
@@ -44,7 +30,7 @@
                 <h2 id="total-expense" class="text-xl font-bold text-rose-700">R$ 0,00</h2>
             </div>
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">📊 Saldo Líquido</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">📊 Saldo</p>
                 <h2 id="monthly-net-balance" class="text-xl font-bold text-slate-800">R$ 0,00</h2>
             </div>
             <div class="bg-amber-50 p-5 rounded-3xl border-2 border-amber-200 shadow-sm text-center">
@@ -53,59 +39,58 @@
             </div>
         </div>
 
-        <div class="mb-10">
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">📋 Gastos por Categoria</h3>
-                <div id="category-report" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4"></div>
-            </div>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-1">
                 <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-200 sticky top-8">
                     <form id="finance-form" class="space-y-4">
-                        <h2 id="form-mode-title" class="text-xs font-bold text-blue-600 uppercase hidden">Editando Registro...</h2>
                         <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Descrição</label>
-                            <input type="text" id="title" placeholder="Ex: Aluguel..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400" required>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Título</label>
+                            <input type="text" id="title" placeholder="Ex: Internet" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
                         </div>
+
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Valor</label>
-                                <input type="number" id="amount" step="0.01" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
+                                <input type="text" id="amount" placeholder="R$ 0,00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-blue-600" required>
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Tipo</label>
-                                <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold">
+                                <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold" required>
+                                    <option value="" disabled selected>Selecione...</option>
                                     <option value="saida">🔴 Saída</option>
                                     <option value="entrada">🟢 Entrada</option>
                                 </select>
                             </div>
                         </div>
+
                         <div class="space-y-2">
                             <div class="flex justify-between items-center px-1">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label>
-                                <div class="space-x-2">
-                                    <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Nova</button>
-                                    <button type="button" onclick="openCatModal()" class="text-slate-400 text-[10px] font-bold uppercase hover:underline">⚙️ Gerenciar</button>
-                                </div>
+                                <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Nova</button>
                             </div>
-                            <div id="new-category-field" class="hidden p-3 bg-blue-50 rounded-2xl border border-blue-100 space-y-2 mb-2">
+                            <div id="new-category-field" class="hidden p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
                                 <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold uppercase">Adicionar</button>
+                                <input type="date" id="custom-date" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
+                                <textarea id="custom-desc" placeholder="Descrição opcional..." rows="2" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none resize-none"></textarea>
+                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold uppercase">Confirmar</button>
                             </div>
-                            <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm"></select>
+                            <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" required></select>
                         </div>
-                        <input type="date" id="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
-                        <button type="submit" id="btn-submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg hover:bg-black transition">Salvar na Nuvem</button>
-                        <button type="button" id="btn-cancel" onclick="resetForm()" class="w-full bg-slate-100 text-slate-500 p-2 rounded-xl text-xs hidden">Cancelar Edição</button>
+                        <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg">Salvar Lançamento</button>
                     </form>
                 </div>
             </div>
 
             <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-6">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">📋 Pagar por Categoria</h3>
+                    <div id="category-report" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                </div>
+
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table class="w-full text-left"><tbody id="transaction-list" class="divide-y divide-slate-100"></tbody></table>
+                    <table class="w-full text-left">
+                        <tbody id="transaction-list" class="divide-y divide-slate-100"></tbody>
+                    </table>
                     <div id="loading" class="p-10 text-center text-slate-400 font-bold uppercase text-xs">Sincronizando...</div>
                 </div>
             </div>
@@ -118,89 +103,36 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let transactions = [];
-        let editingId = null;
         let baseCategories = ["Alimentação", "Moradia", "Salário", "Lazer", "Saúde", "Transporte", "Outros"];
-        
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
-        // --- GESTÃO DE CATEGORIAS ---
-        function getUniqueCategories() {
-            // Unir categorias base com categorias existentes no banco e ordenar alfabeticamente
-            const fromData = transactions.map(t => t.category);
-            return [...new Set([...baseCategories, ...fromData])].sort((a, b) => a.localeCompare(b));
-        }
+        const amountInput = document.getElementById('amount');
+        amountInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, "");
+            value = (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            e.target.value = value === 'R$ 0,00' ? '' : value;
+        });
 
-        function openCatModal() {
-            const list = document.getElementById('cat-manage-list');
-            list.innerHTML = '';
-            const sortedCats = getUniqueCategories();
-            
-            sortedCats.forEach(cat => {
-                const div = document.createElement('div');
-                div.className = "flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-100";
-                div.innerHTML = `
-                    <input type="text" value="${cat}" id="input-cat-${cat}" class="flex-1 bg-white border border-slate-200 rounded-lg p-1 text-sm outline-none focus:border-blue-400">
-                    <button onclick="renameCategory('${cat}')" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase">Renomear</button>
-                `;
-                list.appendChild(div);
-            });
-            document.getElementById('cat-modal').classList.add('active');
-        }
-
-        function closeCatModal() { document.getElementById('cat-modal').classList.remove('active'); }
-
-        async function renameCategory(oldName) {
-            const newName = document.getElementById(`input-cat-${oldName}`).value.trim();
-            if (!newName || newName === oldName) return;
-
-            if(confirm(`Mudar todas as transações de "${oldName}" para "${newName}"?`)) {
-                const { error } = await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName);
-                if (!error) {
-                    baseCategories = baseCategories.map(c => c === oldName ? newName : c);
-                    await loadData();
-                    closeCatModal();
-                }
-            }
+        function parseCurrency(v) { return parseFloat(v.replace(/[^\d,]/g, "").replace(",", ".")) || 0; }
+        function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); }
+        function saveNewCategory() {
+            const name = document.getElementById('custom-cat-name').value.trim();
+            if (name) { baseCategories.push(name); updateCategoryDropdown(); document.getElementById('category').value = name; toggleNewCategory(); }
         }
 
         function updateCategoryDropdown() {
             const select = document.getElementById('category');
-            const currentVal = select.value;
-            select.innerHTML = '';
-            
-            // ORDEM ALFABÉTICA NO DROPDOWN
-            const sortedCats = getUniqueCategories();
-            
-            sortedCats.forEach(cat => {
+            select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+            [...new Set([...baseCategories, ...transactions.map(t => t.category)])].sort().forEach(cat => {
                 const opt = document.createElement('option');
-                opt.value = opt.text = cat;
-                select.add(opt);
+                opt.value = opt.text = cat; select.add(opt);
             });
-            if(sortedCats.includes(currentVal)) select.value = currentVal;
         }
 
-        function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); }
-        function saveNewCategory() {
-            const name = document.getElementById('custom-cat-name').value.trim();
-            if (name) {
-                baseCategories.push(name);
-                updateCategoryDropdown();
-                document.getElementById('category').value = name;
-                toggleNewCategory();
-                document.getElementById('custom-cat-name').value = '';
-            }
-        }
-
-        // --- BANCO DE DADOS ---
         async function loadData() {
-            document.getElementById('loading').classList.remove('hidden');
             const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: false });
-            if (!error) { 
-                transactions = data; 
-                updateCategoryDropdown(); 
-                render(); 
-            }
+            if (!error) { transactions = data; updateCategoryDropdown(); render(); }
             document.getElementById('loading').classList.add('hidden');
         }
 
@@ -208,97 +140,103 @@
             e.preventDefault();
             const payload = {
                 title: document.getElementById('title').value,
-                amount: parseFloat(document.getElementById('amount').value),
+                amount: parseCurrency(document.getElementById('amount').value),
                 type: document.getElementById('type').value,
                 category: document.getElementById('category').value,
-                date: document.getElementById('date').value
+                date: document.getElementById('custom-date').value || new Date().toISOString().split('T')[0],
+                description: document.getElementById('custom-desc').value || '',
+                paid: false
             };
-            if (editingId) { await _supabase.from('transacoes').update(payload).eq('id', editingId); resetForm(); }
-            else { payload.paid = false; await _supabase.from('transacoes').insert([payload]); document.getElementById('finance-form').reset(); }
+            await _supabase.from('transacoes').insert([payload]);
+            document.getElementById('finance-form').reset();
+            document.getElementById('amount').value = '';
+            updateCategoryDropdown();
             loadData();
         }
 
-        function editItem(id) {
-            const item = transactions.find(t => t.id === id);
-            if (item) {
-                editingId = id;
-                document.getElementById('title').value = item.title;
-                document.getElementById('amount').value = item.amount;
-                document.getElementById('type').value = item.type;
-                document.getElementById('category').value = item.category;
-                document.getElementById('date').value = item.date;
-                document.getElementById('btn-submit').innerText = "Atualizar Registro";
-                document.getElementById('btn-submit').className = "w-full bg-blue-600 text-white p-4 rounded-2xl font-bold shadow-lg";
-                document.getElementById('btn-cancel').classList.remove('hidden');
-                document.getElementById('form-mode-title').classList.remove('hidden');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+        async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
+        
+        // FUNÇÃO PARA PAGAR TODOS DA CATEGORIA NO MÊS
+        async function payAllByCategory(categoryName) {
+            const currentMonth = monthFilter.value;
+            const toUpdate = transactions.filter(t => 
+                t.category === categoryName && 
+                t.date.startsWith(currentMonth) && 
+                !t.paid && 
+                t.type === 'saida'
+            );
+
+            if (toUpdate.length === 0) return;
+            if (confirm(`Marcar todos os ${toUpdate.length} lançamentos de "${categoryName}" como pagos?`)) {
+                const ids = toUpdate.map(t => t.id);
+                const { error } = await _supabase.from('transacoes').update({ paid: true }).in('id', ids);
+                if (!error) loadData();
             }
         }
 
-        function resetForm() {
-            editingId = null;
-            document.getElementById('finance-form').reset();
-            document.getElementById('btn-submit').innerText = "Salvar na Nuvem";
-            document.getElementById('btn-submit').className = "w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg";
-            document.getElementById('btn-cancel').classList.add('hidden');
-            document.getElementById('form-mode-title').classList.add('hidden');
-        }
-
-        async function togglePaid(id, currentStatus) {
-            await _supabase.from('transacoes').update({ paid: !currentStatus }).eq('id', id);
-            loadData();
-        }
-
-        async function deleteItem(id) {
-            if(confirm("Excluir registro?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); }
-        }
+        async function deleteItem(id) { if(confirm("Excluir?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
 
         function render() {
-            const filterValue = monthFilter.value;
             const list = document.getElementById('transaction-list');
             const reportDiv = document.getElementById('category-report');
             list.innerHTML = ''; reportDiv.innerHTML = '';
-            let inc = 0, exp = 0, toPay = 0, categoriesMap = {};
+            let inc = 0, exp = 0, toPay = 0, catMap = {};
 
             transactions.forEach(t => {
-                if (t.date.startsWith(filterValue)) {
-                    const valor = Number(t.amount);
-                    const isEntrada = t.type.toLowerCase().includes('entrada');
-                    const estaPago = (t.paid === true || t.paid === 'true');
+                if (t.date.startsWith(monthFilter.value)) {
+                    const isEntrada = t.type.includes('entrada');
+                    const isPaid = (t.paid === true || t.paid === 'true');
                     
-                    if (!categoriesMap[t.category]) categoriesMap[t.category] = 0;
-                    if (isEntrada) { inc += valor; categoriesMap[t.category] += valor; } 
-                    else { exp += valor; categoriesMap[t.category] -= valor; if (!estaPago) toPay += valor; }
+                    if (isEntrada) inc += t.amount; 
+                    else { 
+                        exp += t.amount; 
+                        if (!isPaid) toPay += t.amount; 
+                    }
+
+                    // Mapa para o relatório de categorias
+                    if (!catMap[t.category]) catMap[t.category] = { total: 0, pending: 0 };
+                    if (!isEntrada) {
+                        catMap[t.category].total += t.amount;
+                        if (!isPaid) catMap[t.category].pending++;
+                    }
 
                     const tr = document.createElement('tr');
-                    tr.className = `hover:bg-slate-50 transition ${estaPago ? 'is-paid' : ''}`;
+                    tr.className = `hover:bg-slate-50 ${isPaid ? 'is-paid' : ''}`;
                     tr.innerHTML = `
-                        <td class="px-4 py-4 w-10">
-                            <button onclick="togglePaid(${t.id}, ${estaPago})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${estaPago ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${estaPago ? '✓' : ''}</button>
+                        <td class="p-4 w-10">
+                            <button onclick="togglePaid(${t.id}, ${isPaid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isPaid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${isPaid ? '✓' : ''}</button>
                         </td>
-                        <td class="px-2 py-4">
+                        <td class="py-4 px-2">
                             <div class="text-sm font-bold text-slate-800">${t.title}</div>
-                            <div class="text-[10px] text-slate-400 uppercase font-bold">${t.category} • ${t.date}</div>
+                            ${t.description ? `<div class="text-[10px] text-slate-500 italic">${t.description}</div>` : ''}
+                            <div class="text-[9px] text-slate-400 uppercase font-black">${t.category} • ${t.date.split('-').reverse().join('/')}</div>
                         </td>
-                        <td class="px-4 py-4 text-right font-bold ${isEntrada ? 'text-emerald-500' : 'text-rose-500'}">R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="px-4 py-4 text-right space-x-2">
-                            <button onclick="editItem(${t.id})" class="text-slate-300 hover:text-blue-500">✏️</button>
-                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
-                        </td>`;
+                        <td class="p-4 text-right font-bold ${isEntrada ? 'text-emerald-500' : 'text-rose-500'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-4 text-right"><button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button></td>
+                    `;
                     list.appendChild(tr);
                 }
             });
 
-            // RELATÓRIO EM ORDEM ALFABÉTICA
-            const sortedReportCats = Object.keys(categoriesMap).sort((a, b) => a.localeCompare(b));
-            
-            sortedReportCats.forEach(cat => {
-                const totalCat = categoriesMap[cat];
-                const card = document.createElement('div');
-                card.className = "p-3 rounded-2xl border border-slate-100 bg-slate-50";
-                card.innerHTML = `<p class="text-[9px] font-black text-slate-400 uppercase truncate">${cat}</p>
-                                  <p class="text-xs font-bold ${totalCat >= 0 ? 'text-emerald-600' : 'text-rose-600'}">R$ ${Math.abs(totalCat).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>`;
-                reportDiv.appendChild(card);
+            // Renderiza os cards de categoria
+            Object.keys(catMap).sort().forEach(cat => {
+                const data = catMap[cat];
+                if (data.total > 0) {
+                    const card = document.createElement('div');
+                    card.className = "p-3 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center";
+                    card.innerHTML = `
+                        <div class="truncate">
+                            <p class="text-[8px] font-black text-slate-400 uppercase truncate">${cat}</p>
+                            <p class="text-[10px] font-bold text-rose-600">R$ ${data.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        ${data.pending > 0 ? `
+                            <button onclick="payAllByCategory('${cat}')" title="Pagar todos desta categoria" class="ml-2 w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white transition shadow-sm font-bold text-xs">✓</button>
+                        ` : `
+                            <span class="ml-2 text-emerald-500 text-xs">✔</span>
+                        `}
+                    `;
+                    reportDiv.appendChild(card);
+                }
             });
 
             document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
