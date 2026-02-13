@@ -10,6 +10,8 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .is-paid { opacity: 0.4; text-decoration: line-through; }
+        .edit-mode { border: 2px solid #3b82f6 !important; background-color: #eff6ff !important; }
+        .cat-tag:hover { background-color: #f8fafc; cursor: pointer; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -22,11 +24,11 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">🟢 Entradas</p>
+                <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">🟢 Recebimentos</p>
                 <h2 id="total-income" class="text-xl font-bold text-emerald-700">R$ 0,00</h2>
             </div>
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">🔴 Saídas</p>
+                <p class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">🔴 Gastos</p>
                 <h2 id="total-expense" class="text-xl font-bold text-rose-700">R$ 0,00</h2>
             </div>
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
@@ -41,11 +43,15 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-1">
-                <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-200 sticky top-8">
+                <div id="form-container" class="bg-white p-6 rounded-3xl shadow-md border border-slate-200 sticky top-8">
+                    <div id="edit-badge" class="hidden mb-4 text-[10px] bg-blue-600 text-white px-3 py-1 rounded-full font-bold uppercase w-fit">Editando Lançamento</div>
+                    
                     <form id="finance-form" class="space-y-4">
+                        <input type="hidden" id="edit-id">
+                        
                         <div>
                             <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Título</label>
-                            <input type="text" id="title" placeholder="Ex: Internet" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
+                            <input type="text" id="title" placeholder="Ex: Aluguel" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" required>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
@@ -57,26 +63,53 @@
                                 <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Tipo</label>
                                 <select id="type" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold" required>
                                     <option value="" disabled selected>Selecione...</option>
-                                    <option value="saida">🔴 Saída</option>
-                                    <option value="entrada">🟢 Entrada</option>
+                                    <option value="saida">🔴 Gasto</option>
+                                    <option value="entrada">🟢 Recebimento</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <div id="recurrence-section" class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Recorrência</label>
+                                <select id="recurrence" onchange="toggleParcelas()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold">
+                                    <option value="unico">Único</option>
+                                    <option value="fixo">Mensal Fixo</option>
+                                    <option value="parcelado">Parcelado</option>
+                                </select>
+                            </div>
+                            <div id="parcelas-div" class="invisible">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Nº Parcelas</label>
+                                <input type="number" id="installments" value="2" min="2" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
                             </div>
                         </div>
 
                         <div class="space-y-2">
                             <div class="flex justify-between items-center px-1">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label>
-                                <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Nova</button>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="toggleCategoryManager()" class="text-slate-400 text-sm hover:text-blue-500" title="Gerenciar/Renomear">⚙️</button>
+                                    <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Nova</button>
+                                </div>
                             </div>
+                            
+                            <div id="category-manager" class="hidden p-4 bg-slate-100 rounded-2xl border border-slate-200 space-y-3">
+                                <p class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Clique no nome para editar</p>
+                                <div id="my-categories-list" class="flex flex-wrap gap-2"></div>
+                            </div>
+
                             <div id="new-category-field" class="hidden p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
                                 <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                <input type="date" id="custom-date" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                <textarea id="custom-desc" placeholder="Descrição opcional..." rows="2" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none resize-none"></textarea>
+                                <input type="number" id="custom-due-day" min="1" max="31" placeholder="Dia de Vencimento" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
                                 <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold uppercase">Confirmar</button>
                             </div>
                             <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" required></select>
                         </div>
-                        <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg">Salvar Lançamento</button>
+                        
+                        <div class="flex flex-col gap-2">
+                            <button type="submit" id="btn-submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg">Salvar Lançamento</button>
+                            <button type="button" id="btn-cancel" onclick="cancelEdit()" class="hidden w-full bg-slate-200 text-slate-600 p-3 rounded-2xl font-bold">Cancelar Edição</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -86,7 +119,6 @@
                     <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">📋 Pagar por Categoria</h3>
                     <div id="category-report" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
                 </div>
-
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                     <table class="w-full text-left">
                         <tbody id="transaction-list" class="divide-y divide-slate-100"></tbody>
@@ -104,6 +136,7 @@
 
         let transactions = [];
         let baseCategories = ["Alimentação", "Moradia", "Salário", "Lazer", "Saúde", "Transporte", "Outros"];
+        let customCategories = JSON.parse(localStorage.getItem('myCustomCats')) || [];
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
@@ -115,19 +148,63 @@
         });
 
         function parseCurrency(v) { return parseFloat(v.replace(/[^\d,]/g, "").replace(",", ".")) || 0; }
-        function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); }
+        function toggleParcelas() { document.getElementById('parcelas-div').style.visibility = document.getElementById('recurrence').value === 'parcelado' ? 'visible' : 'hidden'; }
+        function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); document.getElementById('category-manager').classList.add('hidden'); }
+        function toggleCategoryManager() { document.getElementById('category-manager').classList.toggle('hidden'); document.getElementById('new-category-field').classList.add('hidden'); renderCategoryManager(); }
+
         function saveNewCategory() {
             const name = document.getElementById('custom-cat-name').value.trim();
-            if (name) { baseCategories.push(name); updateCategoryDropdown(); document.getElementById('category').value = name; toggleNewCategory(); }
+            if (name && !baseCategories.includes(name) && !customCategories.includes(name)) {
+                customCategories.push(name);
+                localStorage.setItem('myCustomCats', JSON.stringify(customCategories));
+                updateCategoryDropdown();
+                document.getElementById('category').value = name;
+                toggleNewCategory();
+                document.getElementById('custom-cat-name').value = '';
+            }
+        }
+
+        async function renameCategory(oldName) {
+            const newName = prompt(`Renomear a categoria "${oldName}" para:`, oldName);
+            if (!newName || newName === oldName) return;
+            if (baseCategories.includes(newName) || customCategories.includes(newName)) { alert("Este nome já existe!"); return; }
+
+            const updateTrans = confirm(`Deseja atualizar todas as transações de "${oldName}" para "${newName}"?`);
+            if (updateTrans) { await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName); }
+
+            customCategories = customCategories.map(c => c === oldName ? newName : c);
+            localStorage.setItem('myCustomCats', JSON.stringify(customCategories));
+            updateCategoryDropdown(); renderCategoryManager(); loadData();
+        }
+
+        function removeCategory(name) {
+            if(confirm(`Remover "${name}" da lista?`)) {
+                customCategories = customCategories.filter(c => c !== name);
+                localStorage.setItem('myCustomCats', JSON.stringify(customCategories));
+                updateCategoryDropdown(); renderCategoryManager();
+            }
+        }
+
+        function renderCategoryManager() {
+            const container = document.getElementById('my-categories-list');
+            container.innerHTML = '';
+            customCategories.forEach(cat => {
+                const span = document.createElement('span');
+                span.className = "cat-tag flex items-center gap-2 bg-white px-2 py-1 rounded-lg text-[10px] border border-slate-200 font-bold text-slate-600 transition";
+                span.innerHTML = `<span onclick="renameCategory('${cat}')">${cat}</span><button onclick="removeCategory('${cat}')" class="text-rose-400">×</button>`;
+                container.appendChild(span);
+            });
         }
 
         function updateCategoryDropdown() {
             const select = document.getElementById('category');
+            const current = select.value;
             select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
-            [...new Set([...baseCategories, ...transactions.map(t => t.category)])].sort().forEach(cat => {
+            [...new Set([...baseCategories, ...customCategories])].sort().forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = opt.text = cat; select.add(opt);
             });
+            if(current && [...baseCategories, ...customCategories].includes(current)) select.value = current;
         }
 
         async function loadData() {
@@ -136,45 +213,75 @@
             document.getElementById('loading').classList.add('hidden');
         }
 
+        function startEdit(id) {
+            const t = transactions.find(item => item.id === id);
+            if(!t) return;
+            document.getElementById('edit-id').value = t.id;
+            document.getElementById('title').value = t.title;
+            document.getElementById('amount').value = t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('type').value = t.type;
+            document.getElementById('category').value = t.category;
+            document.getElementById('recurrence-section').classList.add('hidden');
+            document.getElementById('form-container').classList.add('edit-mode');
+            document.getElementById('edit-badge').classList.remove('hidden');
+            document.getElementById('btn-cancel').classList.remove('hidden');
+            document.getElementById('btn-submit').innerText = "Atualizar Lançamento";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            document.getElementById('finance-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('recurrence-section').classList.remove('hidden');
+            document.getElementById('form-container').classList.remove('edit-mode');
+            document.getElementById('edit-badge').classList.add('hidden');
+            document.getElementById('btn-cancel').classList.add('hidden');
+            document.getElementById('btn-submit').innerText = "Salvar Lançamento";
+        }
+
         async function saveData(e) {
             e.preventDefault();
-            const payload = {
-                title: document.getElementById('title').value,
-                amount: parseCurrency(document.getElementById('amount').value),
-                type: document.getElementById('type').value,
-                category: document.getElementById('category').value,
-                date: document.getElementById('custom-date').value || new Date().toISOString().split('T')[0],
-                description: document.getElementById('custom-desc').value || '',
-                paid: false
-            };
-            await _supabase.from('transacoes').insert([payload]);
-            document.getElementById('finance-form').reset();
-            document.getElementById('amount').value = '';
-            updateCategoryDropdown();
+            const editId = document.getElementById('edit-id').value;
+            const title = document.getElementById('title').value;
+            const amount = parseCurrency(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+
+            if (editId) {
+                const original = transactions.find(t => t.id == editId);
+                const updateAll = confirm("Atualizar também os futuros com este mesmo título?");
+                if (updateAll) {
+                    await _supabase.from('transacoes').update({ title, amount, type, category }).eq('title', original.title).gte('date', original.date);
+                } else {
+                    await _supabase.from('transacoes').update({ title, amount, type, category }).eq('id', editId);
+                }
+                cancelEdit();
+            } else {
+                const recType = document.getElementById('recurrence').value;
+                const dueDay = parseInt(document.getElementById('custom-due-day').value) || new Date().getDate();
+                const now = new Date();
+                let payloads = [];
+                const numIter = recType === 'parcelado' ? parseInt(document.getElementById('installments').value) : (recType === 'fixo' ? 12 : 1);
+                for (let i = 0; i < numIter; i++) {
+                    let d = new Date(now.getFullYear(), now.getMonth() + i, dueDay, 12, 0, 0);
+                    payloads.push({ title: recType === 'parcelado' ? `${title} ${i+1}/${numIter}` : title, amount, type, category, date: d.toISOString().split('T')[0], paid: false });
+                }
+                await _supabase.from('transacoes').insert(payloads);
+                document.getElementById('finance-form').reset();
+            }
             loadData();
         }
 
         async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
-        
-        // FUNÇÃO PARA PAGAR TODOS DA CATEGORIA NO MÊS
-        async function payAllByCategory(categoryName) {
-            const currentMonth = monthFilter.value;
-            const toUpdate = transactions.filter(t => 
-                t.category === categoryName && 
-                t.date.startsWith(currentMonth) && 
-                !t.paid && 
-                t.type === 'saida'
-            );
-
-            if (toUpdate.length === 0) return;
-            if (confirm(`Marcar todos os ${toUpdate.length} lançamentos de "${categoryName}" como pagos?`)) {
-                const ids = toUpdate.map(t => t.id);
-                const { error } = await _supabase.from('transacoes').update({ paid: true }).in('id', ids);
-                if (!error) loadData();
+        async function deleteItem(id) { if(confirm("Excluir?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
+        async function payAllByCategory(cat) {
+            const toUpdate = transactions.filter(t => t.category === cat && t.date.startsWith(monthFilter.value) && !t.paid && t.type === 'saida');
+            if (toUpdate.length > 0 && confirm(`Pagar todos de "${cat}"?`)) {
+                await _supabase.from('transacoes').update({ paid: true }).in('id', toUpdate.map(t => t.id));
+                loadData();
             }
         }
-
-        async function deleteItem(id) { if(confirm("Excluir?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
 
         function render() {
             const list = document.getElementById('transaction-list');
@@ -184,57 +291,37 @@
 
             transactions.forEach(t => {
                 if (t.date.startsWith(monthFilter.value)) {
-                    const isEntrada = t.type.includes('entrada');
+                    const isRecebimento = t.type.includes('entrada');
                     const isPaid = (t.paid === true || t.paid === 'true');
-                    
-                    if (isEntrada) inc += t.amount; 
-                    else { 
-                        exp += t.amount; 
-                        if (!isPaid) toPay += t.amount; 
-                    }
-
-                    // Mapa para o relatório de categorias
+                    if (isRecebimento) inc += t.amount; else { exp += t.amount; if (!isPaid) toPay += t.amount; }
                     if (!catMap[t.category]) catMap[t.category] = { total: 0, pending: 0 };
-                    if (!isEntrada) {
-                        catMap[t.category].total += t.amount;
-                        if (!isPaid) catMap[t.category].pending++;
-                    }
+                    if (!isRecebimento) { catMap[t.category].total += t.amount; if (!isPaid) catMap[t.category].pending++; }
 
                     const tr = document.createElement('tr');
                     tr.className = `hover:bg-slate-50 ${isPaid ? 'is-paid' : ''}`;
                     tr.innerHTML = `
-                        <td class="p-4 w-10">
-                            <button onclick="togglePaid(${t.id}, ${isPaid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isPaid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${isPaid ? '✓' : ''}</button>
-                        </td>
+                        <td class="p-4 w-10"><button onclick="togglePaid(${t.id}, ${isPaid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isPaid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${isPaid ? '✓' : ''}</button></td>
                         <td class="py-4 px-2">
                             <div class="text-sm font-bold text-slate-800">${t.title}</div>
-                            ${t.description ? `<div class="text-[10px] text-slate-500 italic">${t.description}</div>` : ''}
                             <div class="text-[9px] text-slate-400 uppercase font-black">${t.category} • ${t.date.split('-').reverse().join('/')}</div>
                         </td>
-                        <td class="p-4 text-right font-bold ${isEntrada ? 'text-emerald-500' : 'text-rose-500'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="p-4 text-right"><button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button></td>
+                        <td class="p-4 text-right font-bold ${isRecebimento ? 'text-emerald-500' : 'text-rose-500'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-4 text-right flex gap-2 justify-end">
+                            <button onclick="startEdit(${t.id})" class="text-slate-300 hover:text-blue-500">✏️</button>
+                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
+                        </td>
                     `;
                     list.appendChild(tr);
                 }
             });
 
-            // Renderiza os cards de categoria
             Object.keys(catMap).sort().forEach(cat => {
                 const data = catMap[cat];
                 if (data.total > 0) {
                     const card = document.createElement('div');
                     card.className = "p-3 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center";
-                    card.innerHTML = `
-                        <div class="truncate">
-                            <p class="text-[8px] font-black text-slate-400 uppercase truncate">${cat}</p>
-                            <p class="text-[10px] font-bold text-rose-600">R$ ${data.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                        </div>
-                        ${data.pending > 0 ? `
-                            <button onclick="payAllByCategory('${cat}')" title="Pagar todos desta categoria" class="ml-2 w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white transition shadow-sm font-bold text-xs">✓</button>
-                        ` : `
-                            <span class="ml-2 text-emerald-500 text-xs">✔</span>
-                        `}
-                    `;
+                    card.innerHTML = `<div><p class="text-[8px] font-black text-slate-400 uppercase truncate">${cat}</p><p class="text-[10px] font-bold text-rose-600">R$ ${data.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                        ${data.pending > 0 ? `<button onclick="payAllByCategory('${cat}')" class="ml-2 w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500">✓</button>` : `<span class="text-emerald-500">✔</span>`}`;
                     reportDiv.appendChild(card);
                 }
             });
