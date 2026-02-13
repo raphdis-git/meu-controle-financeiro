@@ -60,7 +60,7 @@
         <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow mb-8">
             <form id="finance-form" class="space-y-4">
                 <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 tracking-widest">Categoria e Vencimento</label>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 tracking-widest">Categoria</label>
                     <div class="flex gap-2">
                         <select id="category" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-blue-700 text-sm" required></select>
                         <button type="button" onclick="toggleNewCategory()" class="bg-blue-600 text-white w-12 rounded-xl font-bold text-xl hover:bg-blue-700 transition">+</button>
@@ -69,11 +69,10 @@
                 </div>
 
                 <div id="add-cat-panel" class="hidden p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="custom-cat-name" placeholder="Nome" class="p-2 text-sm border-white rounded-lg outline-none w-full">
-                        <input type="number" id="custom-cat-day" min="1" max="31" placeholder="Dia" class="p-2 text-sm border-white rounded-lg outline-none w-full">
+                    <div class="grid grid-cols-1 gap-2">
+                        <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="p-2 text-sm border-white rounded-lg outline-none w-full">
                     </div>
-                    <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase">Cadastrar</button>
+                    <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase">Cadastrar Categoria</button>
                 </div>
 
                 <div id="manager-panel" class="hidden p-4 bg-slate-100 rounded-2xl border border-slate-200 space-y-2 text-center">
@@ -162,7 +161,6 @@
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
-        // UI toggles
         function toggleNewCategory() { document.getElementById('add-cat-panel').classList.toggle('hidden'); }
         function toggleManager() { document.getElementById('manager-panel').classList.toggle('hidden'); if(!document.getElementById('manager-panel').classList.contains('hidden')) renderManager(); }
         function toggleInstallments() { document.getElementById('installments-box').classList.toggle('hidden', document.getElementById('recurrence').value !== 'parcelado'); }
@@ -177,57 +175,7 @@
         setupCurrencyInput('amount');
         setupCurrencyInput('edit-amount');
 
-        // Funções do Resumo Anual
-        function openYearlySummary() {
-            const year = monthFilter.value.split('-')[0];
-            document.getElementById('display-year').innerText = year;
-            const container = document.getElementById('yearly-cards');
-            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-            
-            let html = '';
-            for (let m = 1; m <= 12; m++) {
-                const monthStr = `${year}-${m.toString().padStart(2, '0')}`;
-                let inc = 0, exp = 0;
-                
-                transactions.forEach(t => {
-                    if (t.date.startsWith(monthStr)) {
-                        if (t.type === 'entrada') inc += t.amount;
-                        else exp += t.amount;
-                    }
-                });
-
-                const net = inc - exp;
-                html += `
-                    <div class="bg-white p-4 rounded-3xl border border-slate-200 flex items-center justify-between shadow-sm">
-                        <div class="w-1/4">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${months[m-1]}</p>
-                        </div>
-                        <div class="flex flex-1 justify-around text-center px-2">
-                            <div>
-                                <p class="text-[8px] font-bold text-slate-300 uppercase">Entrada</p>
-                                <p class="text-[11px] font-bold text-emerald-600">R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                            </div>
-                            <div>
-                                <p class="text-[8px] font-bold text-slate-300 uppercase">Saída</p>
-                                <p class="text-[11px] font-bold text-rose-500">R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                            </div>
-                        </div>
-                        <div class="w-1/4 text-right">
-                            <p class="text-[8px] font-bold text-slate-300 uppercase">Livre</p>
-                            <p class="text-xs font-black ${net >= 0 ? 'text-blue-600' : 'text-rose-700'}">R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                        </div>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-            document.getElementById('yearly-summary-screen').classList.remove('hidden');
-        }
-
-        function closeYearlySummary() {
-            document.getElementById('yearly-summary-screen').classList.add('hidden');
-        }
-
-        // Categorias e Supabase
+        // Funções de carregamento e interface
         async function loadData() {
             const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: true });
             if (!error) { transactions = data; updateCategoryDropdown(); render(); }
@@ -236,13 +184,13 @@
 
         function saveNewCategory() {
             const name = document.getElementById('custom-cat-name').value.trim();
-            const day = document.getElementById('custom-cat-day').value;
-            if (name && day) {
-                categorySettings[name] = { day: day.toString().padStart(2, '0') };
+            if (name) {
+                // Removemos o campo 'day' da lógica, fixando em '01' internamente
+                categorySettings[name] = { day: '01' };
                 localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
-                updateCategoryDropdown(name); toggleNewCategory();
+                updateCategoryDropdown(name); 
+                toggleNewCategory();
                 document.getElementById('custom-cat-name').value = '';
-                document.getElementById('custom-cat-day').value = '';
             }
         }
 
@@ -253,7 +201,7 @@
                 const div = document.createElement('div');
                 div.className = "bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-2 shadow-sm transition hover:border-blue-300";
                 div.innerHTML = `
-                    <span class="cursor-pointer text-slate-700" onclick="renameCat('${cat}')">${cat} (${categorySettings[cat].day})</span>
+                    <span class="cursor-pointer text-slate-700" onclick="renameCat('${cat}')">${cat}</span>
                     <button onclick="removeCat('${cat}')" class="text-rose-400 font-bold hover:text-rose-600 ml-1">×</button>
                 `;
                 container.appendChild(div);
@@ -262,12 +210,10 @@
 
         async function renameCat(oldName) {
             const newName = prompt("Novo nome da categoria:", oldName);
-            const newDay = prompt("Novo dia de vencimento padrão (01-31):", categorySettings[oldName].day);
-            if (newName && newDay) {
-                const formattedDay = newDay.padStart(2, '0');
+            if (newName) {
                 const { error } = await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName);
                 if (error) { alert("Erro ao atualizar: " + error.message); return; }
-                categorySettings[newName] = { day: formattedDay };
+                categorySettings[newName] = { day: '01' };
                 if (newName !== oldName) delete categorySettings[oldName];
                 localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
                 updateCategoryDropdown(); renderManager(); loadData();
@@ -289,82 +235,10 @@
             allCats.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat;
-                opt.text = cat + (categorySettings[cat] ? ` (Dia ${categorySettings[cat].day})` : '');
+                opt.text = cat; // Removido o sufixo (Dia XX)
                 select.add(opt);
             });
             if(selected) select.value = selected;
-        }
-
-        async function payCategory(categoryName) {
-            const month = monthFilter.value;
-            const idsToUpdate = transactions
-                .filter(t => t.category === categoryName && t.date.startsWith(month) && t.type === 'saida' && !t.paid)
-                .map(t => t.id);
-            if (idsToUpdate.length === 0) return;
-            if (confirm(`Quitar todos os lançamentos de "${categoryName}"?`)) {
-                const { error } = await _supabase.from('transacoes').update({ paid: true }).in('id', idsToUpdate);
-                if(!error) loadData();
-            }
-        }
-
-        function render() {
-            const list = document.getElementById('transaction-list');
-            const summaryBox = document.getElementById('category-summary');
-            list.innerHTML = '';
-            summaryBox.innerHTML = '';
-            let inc = 0, exp = 0, toPay = 0;
-            let catStats = {};
-
-            transactions.forEach(t => {
-                if (t.date.startsWith(monthFilter.value)) {
-                    const isInc = t.type === 'entrada';
-                    if (isInc) inc += t.amount; 
-                    else { 
-                        exp += t.amount; 
-                        if(!t.paid) {
-                            toPay += t.amount;
-                            catStats[t.category] = (catStats[t.category] || 0) + t.amount;
-                        }
-                    }
-                    const dia = t.date.split('-')[2];
-                    const tr = document.createElement('tr');
-                    tr.className = `hover:bg-slate-50/50 transition-colors ${t.paid ? 'is-paid' : ''}`;
-                    tr.innerHTML = `
-                        <td class="p-4 w-12"><button onclick="togglePaid(${t.id}, ${t.paid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${t.paid ? '✓' : ''}</button></td>
-                        <td class="py-4 px-2">
-                            <div class="text-sm font-semibold text-slate-700">${t.title}</div>
-                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Venc. ${dia} • ${t.category}</div>
-                        </td>
-                        <td class="p-4 text-right font-bold text-sm ${isInc ? 'text-emerald-500' : 'text-slate-600'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="p-4 text-right flex gap-3 justify-end">
-                            <button onclick="openEditModal(${t.id})" class="text-slate-300 hover:text-blue-500">📝</button>
-                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
-                        </td>
-                    `;
-                    list.appendChild(tr);
-                }
-            });
-
-            Object.keys(catStats).forEach(cat => {
-                const card = document.createElement('div');
-                card.className = "flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl";
-                card.innerHTML = `
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${cat}</p>
-                        <p class="text-xs font-bold text-rose-500">R$ ${catStats[cat].toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                    <button onclick="payCategory('${cat}')" class="bg-emerald-100 text-emerald-600 text-[10px] font-black px-3 py-2 rounded-xl hover:bg-emerald-600 hover:text-white transition uppercase">Quitar Tudo</button>
-                `;
-                summaryBox.appendChild(card);
-            });
-
-            if(Object.keys(catStats).length === 0) summaryBox.innerHTML = '<p class="text-[10px] text-slate-300 italic">Nenhuma pendência este mês.</p>';
-            const net = inc - exp;
-            document.getElementById('balance-card').className = `p-4 rounded-2xl card-shadow col-span-1 text-center sm:text-left ${net >= 0 ? 'balance-positive' : 'balance-negative'}`;
-            document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('monthly-net-balance').innerText = `R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         }
 
         async function saveData(e) {
@@ -372,7 +246,10 @@
             const cat = document.getElementById('category').value;
             const amount = parseFloat(document.getElementById('amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
             const [year, month] = monthFilter.value.split('-');
-            const calcDate = `${year}-${month}-${categorySettings[cat]?.day || '01'}`;
+            
+            // Agora usamos sempre o dia 01 já que o campo foi removido
+            const calcDate = `${year}-${month}-01`;
+            
             const recType = document.getElementById('recurrence').value;
             let numRep = (recType === 'fixo') ? 12 : (recType === 'parcelado' ? (parseInt(document.getElementById('installments-count').value) || 2) : 1);
             let payloads = [];
@@ -386,6 +263,9 @@
             document.getElementById('finance-form').reset();
             loadData();
         }
+
+        // --- Mantenha as funções de render(), openYearlySummary() etc. iguais ao seu original ---
+        // (Abaixo segue apenas o fechamento essencial para o código rodar)
 
         async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
         async function deleteItem(id) { if(confirm("Excluir?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
@@ -410,6 +290,104 @@
             }
             closeEditModal(); loadData();
         }
+
+        function render() {
+            const list = document.getElementById('transaction-list');
+            const summaryBox = document.getElementById('category-summary');
+            list.innerHTML = '';
+            summaryBox.innerHTML = '';
+            let inc = 0, exp = 0, toPay = 0;
+            let catStats = {};
+
+            transactions.forEach(t => {
+                if (t.date.startsWith(monthFilter.value)) {
+                    const isInc = t.type === 'entrada';
+                    if (isInc) inc += t.amount; 
+                    else { 
+                        exp += t.amount; 
+                        if(!t.paid) {
+                            toPay += t.amount;
+                            catStats[t.category] = (catStats[t.category] || 0) + t.amount;
+                        }
+                    }
+                    const tr = document.createElement('tr');
+                    tr.className = `hover:bg-slate-50/50 transition-colors ${t.paid ? 'is-paid' : ''}`;
+                    tr.innerHTML = `
+                        <td class="p-4 w-12"><button onclick="togglePaid(${t.id}, ${t.paid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${t.paid ? '✓' : ''}</button></td>
+                        <td class="py-4 px-2">
+                            <div class="text-sm font-semibold text-slate-700">${t.title}</div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">${t.category}</div>
+                        </td>
+                        <td class="p-4 text-right font-bold text-sm ${isInc ? 'text-emerald-500' : 'text-slate-600'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-4 text-right flex gap-3 justify-end">
+                            <button onclick="openEditModal(${t.id})" class="text-slate-300 hover:text-blue-500">📝</button>
+                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                }
+            });
+
+            Object.keys(catStats).forEach(cat => {
+                const card = document.createElement('div');
+                card.className = "flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl";
+                card.innerHTML = `
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${cat}</p>
+                        <p class="text-xs font-bold text-rose-500">R$ ${catStats[cat].toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                    <button onclick="payCategory('${cat}')" class="bg-emerald-100 text-emerald-600 text-[10px] font-black px-3 py-2 rounded-xl hover:bg-emerald-600 hover:text-white transition uppercase">Quitar Tudo</button>
+                `;
+                summaryBox.appendChild(card);
+            });
+
+            const net = inc - exp;
+            document.getElementById('balance-card').className = `p-4 rounded-2xl card-shadow col-span-1 text-center sm:text-left ${net >= 0 ? 'balance-positive' : 'balance-negative'}`;
+            document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('monthly-net-balance').innerText = `R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        }
+
+        async function payCategory(categoryName) {
+            const month = monthFilter.value;
+            const idsToUpdate = transactions.filter(t => t.category === categoryName && t.date.startsWith(month) && t.type === 'saida' && !t.paid).map(t => t.id);
+            if (idsToUpdate.length > 0 && confirm(`Quitar "${categoryName}"?`)) {
+                await _supabase.from('transacoes').update({ paid: true }).in('id', idsToUpdate);
+                loadData();
+            }
+        }
+
+        function openYearlySummary() {
+            const year = monthFilter.value.split('-')[0];
+            document.getElementById('display-year').innerText = year;
+            const container = document.getElementById('yearly-cards');
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            let html = '';
+            for (let m = 1; m <= 12; m++) {
+                const monthStr = `${year}-${m.toString().padStart(2, '0')}`;
+                let inc = 0, exp = 0;
+                transactions.forEach(t => {
+                    if (t.date.startsWith(monthStr)) {
+                        if (t.type === 'entrada') inc += t.amount;
+                        else exp += t.amount;
+                    }
+                });
+                const net = inc - exp;
+                html += `
+                    <div class="bg-white p-4 rounded-3xl border border-slate-200 flex items-center justify-between shadow-sm">
+                        <div class="w-1/4"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${months[m-1]}</p></div>
+                        <div class="flex flex-1 justify-around text-center px-2">
+                            <div><p class="text-[8px] font-bold text-slate-300 uppercase">Entrada</p><p class="text-[11px] font-bold text-emerald-600">R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                            <div><p class="text-[8px] font-bold text-slate-300 uppercase">Saída</p><p class="text-[11px] font-bold text-rose-500">R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                        </div>
+                        <div class="w-1/4 text-right"><p class="text-xs font-black ${net >= 0 ? 'text-blue-600' : 'text-rose-700'}">R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                    </div>`;
+            }
+            container.innerHTML = html;
+            document.getElementById('yearly-summary-screen').classList.remove('hidden');
+        }
+        function closeYearlySummary() { document.getElementById('yearly-summary-screen').classList.add('hidden'); }
 
         document.getElementById('finance-form').onsubmit = saveData;
         monthFilter.onchange = loadData;
