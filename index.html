@@ -11,7 +11,8 @@
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .is-paid { opacity: 0.4; text-decoration: line-through; }
         .edit-mode { border: 2px solid #3b82f6 !important; background-color: #eff6ff !important; }
-        .cat-tag:hover { background-color: #f8fafc; cursor: pointer; }
+        .cat-tag-item { transition: all 0.2s; }
+        .cat-tag-item:hover { background-color: #fff1f2; border-color: #fecaca; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -88,21 +89,22 @@
                             <div class="flex justify-between items-center px-1">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Categoria</label>
                                 <div class="flex gap-2">
-                                    <button type="button" onclick="toggleCategoryManager()" class="text-slate-400 text-sm hover:text-blue-500" title="Gerenciar/Renomear">⚙️</button>
+                                    <button type="button" onclick="toggleCategoryManager()" class="bg-slate-100 p-1 rounded hover:bg-blue-100 text-slate-500 hover:text-blue-600 transition" title="Gerenciar Categorias">⚙️</button>
                                     <button type="button" onclick="toggleNewCategory()" class="text-blue-500 text-[10px] font-bold uppercase hover:underline">+ Nova</button>
                                 </div>
                             </div>
                             
-                            <div id="category-manager" class="hidden p-4 bg-slate-100 rounded-2xl border border-slate-200 space-y-3">
-                                <p class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Clique no nome para editar</p>
+                            <div id="category-manager" class="hidden p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 space-y-3">
+                                <p class="text-[9px] font-black text-slate-500 uppercase">Categorias detectadas no Banco:</p>
                                 <div id="my-categories-list" class="flex flex-wrap gap-2"></div>
+                                <p class="text-[8px] text-slate-400 italic">As categorias aparecem aqui assim que são usadas em algum lançamento.</p>
                             </div>
 
                             <div id="new-category-field" class="hidden p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
                                 <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                <input type="number" id="custom-due-day" min="1" max="31" placeholder="Dia de Vencimento" class="w-full p-2 text-sm border border-blue-200 rounded-lg outline-none">
-                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold uppercase">Confirmar</button>
+                                <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold uppercase">Criar Categoria</button>
                             </div>
+                            
                             <select id="category" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" required></select>
                         </div>
                         
@@ -116,7 +118,7 @@
 
             <div class="lg:col-span-2">
                 <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-6">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">📋 Pagar por Categoria</h3>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">📋 Gastos por Categoria</h3>
                     <div id="category-report" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
                 </div>
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -150,8 +152,15 @@
         function parseCurrency(v) { return parseFloat(v.replace(/[^\d,]/g, "").replace(",", ".")) || 0; }
         function toggleParcelas() { document.getElementById('parcelas-div').style.visibility = document.getElementById('recurrence').value === 'parcelado' ? 'visible' : 'hidden'; }
         function toggleNewCategory() { document.getElementById('new-category-field').classList.toggle('hidden'); document.getElementById('category-manager').classList.add('hidden'); }
-        function toggleCategoryManager() { document.getElementById('category-manager').classList.toggle('hidden'); document.getElementById('new-category-field').classList.add('hidden'); renderCategoryManager(); }
 
+        function toggleCategoryManager() { 
+            const manager = document.getElementById('category-manager');
+            manager.classList.toggle('hidden'); 
+            document.getElementById('new-category-field').classList.add('hidden'); 
+            if(!manager.classList.contains('hidden')) renderCategoryManager(); 
+        }
+
+        // --- GESTÃO DE CATEGORIAS DINÂMICAS ---
         function saveNewCategory() {
             const name = document.getElementById('custom-cat-name').value.trim();
             if (name && !baseCategories.includes(name) && !customCategories.includes(name)) {
@@ -165,54 +174,85 @@
         }
 
         async function renameCategory(oldName) {
-            const newName = prompt(`Renomear a categoria "${oldName}" para:`, oldName);
-            if (!newName || newName === oldName) return;
-            if (baseCategories.includes(newName) || customCategories.includes(newName)) { alert("Este nome já existe!"); return; }
+            const newName = prompt(`Novo nome para "${oldName}":`, oldName);
+            if (!newName || newName.trim() === "" || newName === oldName) return;
 
-            const updateTrans = confirm(`Deseja atualizar todas as transações de "${oldName}" para "${newName}"?`);
-            if (updateTrans) { await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName); }
-
-            customCategories = customCategories.map(c => c === oldName ? newName : c);
-            localStorage.setItem('myCustomCats', JSON.stringify(customCategories));
-            updateCategoryDropdown(); renderCategoryManager(); loadData();
+            // Atualiza no Supabase todas as transações que usam o nome antigo
+            const { error } = await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName);
+            
+            if(!error) {
+                // Atualiza localmente também
+                customCategories = customCategories.map(c => c === oldName ? newName : c);
+                localStorage.setItem('myCustomCats', JSON.stringify(customCategories));
+                loadData(); 
+            } else {
+                alert("Erro ao atualizar no banco de dados.");
+            }
         }
 
-        function removeCategory(name) {
-            if(confirm(`Remover "${name}" da lista?`)) {
+        function removeCategoryLocal(name) {
+            if (confirm(`Remover "${name}" da lista de sugestões?`)) {
                 customCategories = customCategories.filter(c => c !== name);
                 localStorage.setItem('myCustomCats', JSON.stringify(customCategories));
-                updateCategoryDropdown(); renderCategoryManager();
+                updateCategoryDropdown();
+                renderCategoryManager();
             }
         }
 
         function renderCategoryManager() {
             const container = document.getElementById('my-categories-list');
             container.innerHTML = '';
-            customCategories.forEach(cat => {
-                const span = document.createElement('span');
-                span.className = "cat-tag flex items-center gap-2 bg-white px-2 py-1 rounded-lg text-[10px] border border-slate-200 font-bold text-slate-600 transition";
-                span.innerHTML = `<span onclick="renameCategory('${cat}')">${cat}</span><button onclick="removeCategory('${cat}')" class="text-rose-400">×</button>`;
-                container.appendChild(span);
+            
+            // Pega categorias únicas das transações do banco + customizadas
+            const dbCategories = [...new Set(transactions.map(t => t.category))];
+            const displayCategories = [...new Set([...dbCategories, ...customCategories])].filter(c => !baseCategories.includes(c));
+
+            if(displayCategories.length === 0) {
+                container.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhuma categoria extra encontrada.</p>';
+                return;
+            }
+
+            displayCategories.forEach(cat => {
+                const div = document.createElement('div');
+                div.className = "cat-tag-item flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm";
+                div.innerHTML = `
+                    <span class="text-[11px] font-bold text-slate-700 cursor-pointer" onclick="renameCategory('${cat}')">${cat}</span>
+                    <button onclick="removeCategoryLocal('${cat}')" class="text-rose-400 font-black text-lg">&times;</button>
+                `;
+                container.appendChild(div);
             });
         }
 
         function updateCategoryDropdown() {
             const select = document.getElementById('category');
             const current = select.value;
-            select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
-            [...new Set([...baseCategories, ...customCategories])].sort().forEach(cat => {
+            select.innerHTML = '<option value="" disabled selected>Selecione uma categoria...</option>';
+            
+            // Puxa tudo que já foi usado no banco de dados + as padrões
+            const dbCategories = [...new Set(transactions.map(t => t.category))];
+            const allCats = [...new Set([...baseCategories, ...customCategories, ...dbCategories])].sort();
+            
+            allCats.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = opt.text = cat; select.add(opt);
             });
-            if(current && [...baseCategories, ...customCategories].includes(current)) select.value = current;
+            if(current && allCats.includes(current)) select.value = current;
         }
 
+        // --- CARREGAMENTO ---
         async function loadData() {
             const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: false });
-            if (!error) { transactions = data; updateCategoryDropdown(); render(); }
+            if (!error) { 
+                transactions = data; 
+                updateCategoryDropdown(); 
+                render(); 
+                // Se o gerenciador estiver aberto, atualiza ele também
+                if(!document.getElementById('category-manager').classList.contains('hidden')) renderCategoryManager();
+            }
             document.getElementById('loading').classList.add('hidden');
         }
 
+        // --- LÓGICA RESTANTE ---
         function startEdit(id) {
             const t = transactions.find(item => item.id === id);
             if(!t) return;
@@ -244,13 +284,13 @@
             e.preventDefault();
             const editId = document.getElementById('edit-id').value;
             const title = document.getElementById('title').value;
-            const amount = parseCurrency(document.getElementById('amount').value);
+            const amount = parseCurrency(amountInput.value);
             const type = document.getElementById('type').value;
             const category = document.getElementById('category').value;
 
             if (editId) {
                 const original = transactions.find(t => t.id == editId);
-                const updateAll = confirm("Atualizar também os futuros com este mesmo título?");
+                const updateAll = confirm("Deseja atualizar também os futuros com este mesmo título?");
                 if (updateAll) {
                     await _supabase.from('transacoes').update({ title, amount, type, category }).eq('title', original.title).gte('date', original.date);
                 } else {
@@ -259,25 +299,26 @@
                 cancelEdit();
             } else {
                 const recType = document.getElementById('recurrence').value;
-                const dueDay = parseInt(document.getElementById('custom-due-day').value) || new Date().getDate();
                 const now = new Date();
                 let payloads = [];
                 const numIter = recType === 'parcelado' ? parseInt(document.getElementById('installments').value) : (recType === 'fixo' ? 12 : 1);
                 for (let i = 0; i < numIter; i++) {
-                    let d = new Date(now.getFullYear(), now.getMonth() + i, dueDay, 12, 0, 0);
+                    let d = new Date(now.getFullYear(), now.getMonth() + i, now.getDate(), 12, 0, 0);
                     payloads.push({ title: recType === 'parcelado' ? `${title} ${i+1}/${numIter}` : title, amount, type, category, date: d.toISOString().split('T')[0], paid: false });
                 }
                 await _supabase.from('transacoes').insert(payloads);
                 document.getElementById('finance-form').reset();
+                amountInput.value = '';
             }
             loadData();
         }
 
         async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
-        async function deleteItem(id) { if(confirm("Excluir?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
+        async function deleteItem(id) { if(confirm("Excluir lançamento?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
+        
         async function payAllByCategory(cat) {
             const toUpdate = transactions.filter(t => t.category === cat && t.date.startsWith(monthFilter.value) && !t.paid && t.type === 'saida');
-            if (toUpdate.length > 0 && confirm(`Pagar todos de "${cat}"?`)) {
+            if (toUpdate.length > 0 && confirm(`Pagar todos de "${cat}" neste mês?`)) {
                 await _supabase.from('transacoes').update({ paid: true }).in('id', toUpdate.map(t => t.id));
                 loadData();
             }
@@ -306,10 +347,7 @@
                             <div class="text-[9px] text-slate-400 uppercase font-black">${t.category} • ${t.date.split('-').reverse().join('/')}</div>
                         </td>
                         <td class="p-4 text-right font-bold ${isRecebimento ? 'text-emerald-500' : 'text-rose-500'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="p-4 text-right flex gap-2 justify-end">
-                            <button onclick="startEdit(${t.id})" class="text-slate-300 hover:text-blue-500">✏️</button>
-                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
-                        </td>
+                        <td class="p-4 text-right flex gap-2 justify-end"><button onclick="startEdit(${t.id})" class="text-slate-300 hover:text-blue-500">✏️</button><button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button></td>
                     `;
                     list.appendChild(tr);
                 }
@@ -321,7 +359,7 @@
                     const card = document.createElement('div');
                     card.className = "p-3 rounded-2xl border border-slate-100 bg-slate-50 flex justify-between items-center";
                     card.innerHTML = `<div><p class="text-[8px] font-black text-slate-400 uppercase truncate">${cat}</p><p class="text-[10px] font-bold text-rose-600">R$ ${data.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
-                        ${data.pending > 0 ? `<button onclick="payAllByCategory('${cat}')" class="ml-2 w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500">✓</button>` : `<span class="text-emerald-500">✔</span>`}`;
+                        ${data.pending > 0 ? `<button onclick="payAllByCategory('${cat}')" class="ml-2 w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white transition shadow-sm font-bold text-xs">✓</button>` : `<span class="ml-2 text-emerald-500 text-xs font-bold">✔</span>`}`;
                     reportDiv.appendChild(card);
                 }
             });
