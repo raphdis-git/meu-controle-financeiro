@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finanças Pro - Controle Total</title>
+    <title>Finanças Pro - Total Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -13,19 +13,24 @@
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); }
         .balance-positive { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
         .balance-negative { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        #edit-modal-overlay { background-color: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); }
-        #yearly-summary-screen { backdrop-filter: blur(8px); }
+        #edit-modal-overlay, #yearly-summary-screen, #transactions-screen { 
+            backdrop-filter: blur(8px); 
+            background-color: rgba(248, 250, 252, 0.95);
+        }
     </style>
 </head>
 <body class="p-4 md:p-6">
 
     <div class="max-w-3xl mx-auto pb-20">
-        <header class="flex justify-between items-center mb-6">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
                 <h1 class="text-xl font-bold tracking-tight">💰 Finanças Cloud</h1>
                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Gestão Pessoal 2026</p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
+                <button onclick="openTransactions()" class="bg-blue-600 text-white px-3 py-2 rounded-xl shadow-sm text-[10px] font-bold uppercase hover:bg-blue-700 transition">
+                    Ver Movimentações
+                </button>
                 <button onclick="openYearlySummary()" class="bg-slate-900 text-white px-3 py-2 rounded-xl shadow-sm text-[10px] font-bold uppercase hover:bg-black transition">
                     Resumo Anual
                 </button>
@@ -34,19 +39,19 @@
         </header>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow text-center sm:text-left">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow">
                 <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Entradas</p>
                 <h2 id="total-income" class="text-base font-bold text-emerald-600">R$ 0,00</h2>
             </div>
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow text-center sm:text-left">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow">
                 <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Saídas</p>
                 <h2 id="total-expense" class="text-base font-bold text-rose-500">R$ 0,00</h2>
             </div>
-            <div id="balance-card" class="p-4 rounded-2xl card-shadow col-span-1 text-center sm:text-left transition-colors duration-500">
+            <div id="balance-card" class="p-4 rounded-2xl card-shadow transition-colors duration-500">
                 <p class="text-[9px] font-bold opacity-70 uppercase mb-1">Saldo Livre</p>
                 <h2 id="monthly-net-balance" class="text-base font-bold">R$ 0,00</h2>
             </div>
-            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 card-shadow text-center sm:text-left">
+            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 card-shadow">
                 <p class="text-[9px] font-bold text-amber-600 uppercase mb-1">Pendente</p>
                 <h2 id="to-pay-balance" class="text-base font-bold text-amber-700">R$ 0,00</h2>
             </div>
@@ -58,9 +63,10 @@
         </div>
 
         <div class="bg-white p-6 rounded-3xl border border-slate-200 card-shadow mb-8">
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Novo Lançamento</h3>
             <form id="finance-form" class="space-y-4">
                 <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 tracking-widest">Categoria</label>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
                     <div class="flex gap-2">
                         <select id="category" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-blue-700 text-sm" required></select>
                         <button type="button" onclick="toggleNewCategory()" class="bg-blue-600 text-white w-12 rounded-xl font-bold text-xl hover:bg-blue-700 transition">+</button>
@@ -69,10 +75,8 @@
                 </div>
 
                 <div id="add-cat-panel" class="hidden p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
-                    <div class="grid grid-cols-1 gap-2">
-                        <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="p-2 text-sm border-white rounded-lg outline-none w-full">
-                    </div>
-                    <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase">Cadastrar Categoria</button>
+                    <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="p-2 text-sm border-white rounded-lg outline-none w-full">
+                    <button type="button" onclick="saveNewCategory()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase">Cadastrar</button>
                 </div>
 
                 <div id="manager-panel" class="hidden p-4 bg-slate-100 rounded-2xl border border-slate-200 space-y-2 text-center">
@@ -81,25 +85,28 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 tracking-widest">Título do Lançamento</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Título</label>
                         <input type="text" id="title" placeholder="Ex: Internet" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" required>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 tracking-widest">Valor</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label>
                         <input type="text" id="amount" placeholder="R$ 0,00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-blue-600 text-sm" required>
                     </div>
                 </div>
 
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label>
+                    <input type="text" id="description" placeholder="Opcional" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <select id="type" class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold" required>
-                        <option value="" disabled selected>Tipo...</option>
                         <option value="saida">🔴 Gasto</option>
                         <option value="entrada">🟢 Recebimento</option>
                     </select>
                     <select id="recurrence" onchange="toggleInstallments()" class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold" required>
-                        <option value="" disabled selected>Repetir...</option>
                         <option value="unico">Uma vez</option>
-                        <option value="fixo">Mensal Fixo</option>
+                        <option value="fixo">Mensal Fixo (12 meses)</option>
                         <option value="parcelado">Parcelado</option>
                     </select>
                     <div id="installments-box" class="hidden">
@@ -110,40 +117,67 @@
                 <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold shadow-lg hover:bg-black transition">Salvar Lançamento</button>
             </form>
         </div>
+    </div>
 
-        <div class="bg-white rounded-3xl border border-slate-200 card-shadow overflow-hidden">
-            <div class="p-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Movimentações do Período</h3>
+    <div id="transactions-screen" class="hidden fixed inset-0 z-[60] overflow-y-auto p-4 md:p-8">
+        <div class="max-w-4xl mx-auto">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800 uppercase">Movimentações</h2>
+                    <p id="transaction-month-label" class="text-[10px] font-bold text-blue-600 uppercase"></p>
+                </div>
+                <button onclick="closeTransactions()" class="bg-white border border-slate-200 px-4 py-2 rounded-2xl font-bold text-xs hover:bg-slate-50">✕ FECHAR</button>
+            </header>
+
+            <div class="bg-white rounded-3xl border border-slate-200 card-shadow overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <div id="bulk-actions" class="hidden flex gap-2 items-center">
+                        <span id="selected-count" class="text-[9px] font-bold text-amber-600 uppercase">0 selecionados</span>
+                        <button onclick="bulkDuplicate()" class="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase hover:bg-amber-600 transition">Duplicar em Lote</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="p-4 w-10">
+                                    <input type="checkbox" id="select-all" onclick="toggleSelectAll()" class="w-4 h-4 rounded border-slate-300">
+                                </th>
+                                <th class="p-4 text-[9px] font-bold text-slate-400 uppercase">Status</th>
+                                <th class="py-4 px-2 text-[9px] font-bold text-slate-400 uppercase">Descrição</th>
+                                <th class="p-4 text-right text-[9px] font-bold text-slate-400 uppercase">Valor</th>
+                                <th class="p-4 text-right text-[9px] font-bold text-slate-400 uppercase">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-list" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+                <div id="loading" class="p-10 text-center text-slate-300 font-bold text-[10px] uppercase">Buscando na nuvem...</div>
             </div>
-            <table class="w-full text-left">
-                <tbody id="transaction-list" class="divide-y divide-slate-50"></tbody>
-            </table>
-            <div id="loading" class="p-10 text-center text-slate-300 font-bold text-[10px] uppercase">Buscando na nuvem...</div>
         </div>
     </div>
 
-    <div id="edit-modal-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="edit-modal-overlay" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
-            <div class="flex justify-between items-center">
-                <h3 class="text-lg font-bold">Editar Transação</h3>
-                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
+            <h3 class="text-lg font-bold">Editar Transação</h3>
             <div class="space-y-4">
                 <input type="text" id="edit-title" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
+                <input type="text" id="edit-description" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
                 <input type="text" id="edit-amount" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-blue-600 text-sm">
             </div>
-            <div class="flex flex-col gap-2 pt-2">
-                <button onclick="confirmEdit(true)" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold text-xs uppercase">Salvar em TODOS os meses futuros</button>
-                <button onclick="confirmEdit(false)" class="w-full bg-slate-100 text-slate-700 p-3 rounded-xl font-bold text-xs uppercase">Salvar APENAS neste mês</button>
+            <div class="flex flex-col gap-2">
+                <button onclick="confirmEdit(true)" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold text-xs uppercase">Salvar em TODOS os futuros</button>
+                <button onclick="confirmEdit(false)" class="w-full bg-slate-100 text-slate-700 p-3 rounded-xl font-bold text-xs uppercase">Apenas este mês</button>
+                <button onclick="closeEditModal()" class="w-full text-slate-400 text-xs font-bold uppercase">Cancelar</button>
             </div>
         </div>
     </div>
 
-    <div id="yearly-summary-screen" class="hidden fixed inset-0 z-[60] bg-slate-50/95 overflow-y-auto p-4 md:p-8">
+    <div id="yearly-summary-screen" class="hidden fixed inset-0 z-[60] overflow-y-auto p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
             <header class="flex justify-between items-center mb-8">
-                <h2 class="text-2xl font-black tracking-tight text-slate-800 uppercase">Resumo <span id="display-year"></span></h2>
-                <button onclick="closeYearlySummary()" class="bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-sm font-bold text-xs hover:bg-slate-100 transition">✕ VOLTAR</button>
+                <h2 class="text-2xl font-black text-slate-800 uppercase">Resumo <span id="display-year"></span></h2>
+                <button onclick="closeYearlySummary()" class="bg-white border border-slate-200 px-4 py-2 rounded-2xl font-bold text-xs">✕ VOLTAR</button>
             </header>
             <div id="yearly-cards" class="space-y-3"></div>
         </div>
@@ -161,6 +195,33 @@
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
+        // --- FUNÇÕES DE NAVEGAÇÃO ---
+        function openTransactions() { 
+            const [year, month] = monthFilter.value.split('-');
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            document.getElementById('transaction-month-label').innerText = `${months[parseInt(month)-1]} ${year}`;
+            document.getElementById('transactions-screen').classList.remove('hidden'); 
+        }
+        function closeTransactions() { document.getElementById('transactions-screen').classList.add('hidden'); }
+
+        function openYearlySummary() {
+            const year = monthFilter.value.split('-')[0];
+            document.getElementById('display-year').innerText = year;
+            const container = document.getElementById('yearly-cards');
+            const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            let html = '';
+            for (let m = 1; m <= 12; m++) {
+                const mStr = `${year}-${m.toString().padStart(2, '0')}`;
+                let inc = 0, exp = 0;
+                transactions.forEach(t => { if (t.date.startsWith(mStr)) { if (t.type === 'entrada') inc += t.amount; else exp += t.amount; } });
+                html += `<div class="bg-white p-4 rounded-3xl border border-slate-200 flex items-center justify-between"><p class="text-xs font-black uppercase w-16">${months[m-1]}</p><div class="flex-1 flex justify-around"><p class="text-emerald-600 text-[11px] font-bold">R$ ${inc.toLocaleString('pt-BR')}</p><p class="text-rose-500 text-[11px] font-bold">R$ ${exp.toLocaleString('pt-BR')}</p></div><p class="font-black text-xs w-20 text-right">R$ ${(inc-exp).toLocaleString('pt-BR')}</p></div>`;
+            }
+            container.innerHTML = html;
+            document.getElementById('yearly-summary-screen').classList.remove('hidden');
+        }
+        function closeYearlySummary() { document.getElementById('yearly-summary-screen').classList.add('hidden'); }
+
+        // --- LÓGICA CORE ---
         function toggleNewCategory() { document.getElementById('add-cat-panel').classList.toggle('hidden'); }
         function toggleManager() { document.getElementById('manager-panel').classList.toggle('hidden'); if(!document.getElementById('manager-panel').classList.contains('hidden')) renderManager(); }
         function toggleInstallments() { document.getElementById('installments-box').classList.toggle('hidden', document.getElementById('recurrence').value !== 'parcelado'); }
@@ -175,67 +236,19 @@
         setupCurrencyInput('amount');
         setupCurrencyInput('edit-amount');
 
-        // Funções de carregamento e interface
         async function loadData() {
             const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: true });
             if (!error) { transactions = data; updateCategoryDropdown(); render(); }
             document.getElementById('loading').classList.add('hidden');
         }
 
-        function saveNewCategory() {
-            const name = document.getElementById('custom-cat-name').value.trim();
-            if (name) {
-                // Removemos o campo 'day' da lógica, fixando em '01' internamente
-                categorySettings[name] = { day: '01' };
-                localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
-                updateCategoryDropdown(name); 
-                toggleNewCategory();
-                document.getElementById('custom-cat-name').value = '';
-            }
-        }
-
-        function renderManager() {
-            const container = document.getElementById('my-categories-list');
-            container.innerHTML = '';
-            Object.keys(categorySettings).sort().forEach(cat => {
-                const div = document.createElement('div');
-                div.className = "bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-2 shadow-sm transition hover:border-blue-300";
-                div.innerHTML = `
-                    <span class="cursor-pointer text-slate-700" onclick="renameCat('${cat}')">${cat}</span>
-                    <button onclick="removeCat('${cat}')" class="text-rose-400 font-bold hover:text-rose-600 ml-1">×</button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        async function renameCat(oldName) {
-            const newName = prompt("Novo nome da categoria:", oldName);
-            if (newName) {
-                const { error } = await _supabase.from('transacoes').update({ category: newName }).eq('category', oldName);
-                if (error) { alert("Erro ao atualizar: " + error.message); return; }
-                categorySettings[newName] = { day: '01' };
-                if (newName !== oldName) delete categorySettings[oldName];
-                localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
-                updateCategoryDropdown(); renderManager(); loadData();
-            }
-        }
-
-        function removeCat(cat) {
-            if(confirm(`Excluir o atalho "${cat}"?`)) {
-                delete categorySettings[cat];
-                localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
-                updateCategoryDropdown(); renderManager();
-            }
-        }
-
         function updateCategoryDropdown(selected = null) {
             const select = document.getElementById('category');
             let allCats = [...new Set([...transactions.map(t => t.category), ...Object.keys(categorySettings)])].filter(c => c).sort();
-            select.innerHTML = '<option value="" disabled selected>Escolha uma categoria...</option>';
+            select.innerHTML = '<option value="" disabled selected>Categoria...</option>';
             allCats.forEach(cat => {
                 const opt = document.createElement('option');
-                opt.value = cat;
-                opt.text = cat; // Removido o sufixo (Dia XX)
+                opt.value = cat; opt.text = cat;
                 select.add(opt);
             });
             if(selected) select.value = selected;
@@ -246,58 +259,139 @@
             const cat = document.getElementById('category').value;
             const amount = parseFloat(document.getElementById('amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
             const [year, month] = monthFilter.value.split('-');
-            
-            // Agora usamos sempre o dia 01 já que o campo foi removido
-            const calcDate = `${year}-${month}-01`;
-            
             const recType = document.getElementById('recurrence').value;
             let numRep = (recType === 'fixo') ? 12 : (recType === 'parcelado' ? (parseInt(document.getElementById('installments-count').value) || 2) : 1);
+            
             let payloads = [];
             for (let i = 0; i < numRep; i++) {
-                let d = new Date(calcDate + 'T12:00:00'); d.setMonth(d.getMonth() + i);
+                let d = new Date(year, parseInt(month)-1 + i, 1, 12, 0, 0);
                 let title = document.getElementById('title').value;
                 if(recType === 'parcelado') title += ` (${(i+1).toString().padStart(2,'0')}/${numRep})`;
-                payloads.push({ title, amount, category: cat, type: document.getElementById('type').value, date: d.toISOString().split('T')[0], paid: false });
+
+                payloads.push({ 
+                    title, amount, category: cat, 
+                    description: document.getElementById('description').value, 
+                    type: document.getElementById('type').value, 
+                    date: d.toISOString().split('T')[0], 
+                    mes_referencia: d.getMonth() + 1,
+                    ano_referencia: d.getFullYear(),
+                    paid: false 
+                });
             }
             await _supabase.from('transacoes').insert(payloads);
             document.getElementById('finance-form').reset();
             loadData();
         }
 
-        // --- Mantenha as funções de render(), openYearlySummary() etc. iguais ao seu original ---
-        // (Abaixo segue apenas o fechamento essencial para o código rodar)
+        function updateBulkUI() {
+            const selected = document.querySelectorAll('.transaction-checkbox:checked');
+            const bulkBar = document.getElementById('bulk-actions');
+            const countLabel = document.getElementById('selected-count');
+            
+            if (selected.length > 0) {
+                bulkBar.classList.remove('hidden');
+                countLabel.innerText = `${selected.length} selecionado(s)`;
+            } else {
+                bulkBar.classList.add('hidden');
+                document.getElementById('select-all').checked = false;
+            }
+        }
 
-        async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
-        async function deleteItem(id) { if(confirm("Excluir?")) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
-        
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('select-all').checked;
+            document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = isChecked);
+            updateBulkUI();
+        }
+
+        async function bulkDuplicate() {
+            const selected = document.querySelectorAll('.transaction-checkbox:checked');
+            const ids = Array.from(selected).map(cb => parseInt(cb.value));
+            const qtd = prompt(`Duplicar os ${ids.length} itens selecionados por quantos meses futuros?`, "1");
+            const num = parseInt(qtd);
+            if (isNaN(num) || num <= 0) return;
+
+            let payloads = [];
+            ids.forEach(id => {
+                const t = transactions.find(x => x.id === id);
+                if (!t) return;
+                const baseDate = new Date(t.date + 'T12:00:00');
+                for (let i = 1; i <= num; i++) {
+                    let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
+                    payloads.push({
+                        title: t.title, amount: t.amount, category: t.category,
+                        description: t.description, type: t.type,
+                        date: d.toISOString().split('T')[0],
+                        mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(),
+                        paid: false
+                    });
+                }
+            });
+
+            const { error } = await _supabase.from('transacoes').insert(payloads);
+            if (error) alert("Erro: " + error.message);
+            else { alert(`${payloads.length} novos lançamentos criados!`); loadData(); }
+        }
+
+        async function duplicateToMonths(id) {
+            const t = transactions.find(x => x.id === id);
+            const qtd = prompt(`Duplicar "${t.title}" para quantos meses futuros?`, "1");
+            const num = parseInt(qtd);
+            if (isNaN(num) || num <= 0) return;
+
+            let payloads = [];
+            const baseDate = new Date(t.date + 'T12:00:00');
+            for (let i = 1; i <= num; i++) {
+                let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
+                payloads.push({
+                    title: t.title, amount: t.amount, category: t.category,
+                    description: t.description, type: t.type,
+                    date: d.toISOString().split('T')[0],
+                    mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(),
+                    paid: false
+                });
+            }
+            await _supabase.from('transacoes').insert(payloads);
+            loadData();
+        }
+
+        async function deleteItem(id) {
+            const t = transactions.find(x => x.id === id);
+            if (confirm(`Excluir "${t.title}"?`)) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); }
+        }
+
         function openEditModal(id) {
             currentEditId = id;
             const t = transactions.find(x => x.id === id);
             document.getElementById('edit-title').value = t.title;
+            document.getElementById('edit-description').value = t.description || '';
             document.getElementById('edit-amount').value = t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             document.getElementById('edit-modal-overlay').classList.remove('hidden');
         }
+
         function closeEditModal() { document.getElementById('edit-modal-overlay').classList.add('hidden'); }
+
         async function confirmEdit(prop) {
             const t = transactions.find(x => x.id === currentEditId);
             const val = parseFloat(document.getElementById('edit-amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
             const title = document.getElementById('edit-title').value;
+            const desc = document.getElementById('edit-description').value;
+            
             if(prop) {
                 const base = t.title.split(' (')[0];
-                await _supabase.from('transacoes').update({ title, amount: val }).match({ category: t.category }).filter('title', 'ilike', `%${base}%`).gte('date', t.date);
+                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).match({ category: t.category }).filter('title', 'ilike', `%${base}%`).gte('date', t.date);
             } else {
-                await _supabase.from('transacoes').update({ title, amount: val }).eq('id', currentEditId);
+                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).eq('id', currentEditId);
             }
             closeEditModal(); loadData();
         }
 
+        async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
+
         function render() {
             const list = document.getElementById('transaction-list');
             const summaryBox = document.getElementById('category-summary');
-            list.innerHTML = '';
-            summaryBox.innerHTML = '';
-            let inc = 0, exp = 0, toPay = 0;
-            let catStats = {};
+            list.innerHTML = ''; summaryBox.innerHTML = '';
+            let inc = 0, exp = 0, toPay = 0, catStats = {};
 
             transactions.forEach(t => {
                 if (t.date.startsWith(monthFilter.value)) {
@@ -305,23 +399,23 @@
                     if (isInc) inc += t.amount; 
                     else { 
                         exp += t.amount; 
-                        if(!t.paid) {
-                            toPay += t.amount;
-                            catStats[t.category] = (catStats[t.category] || 0) + t.amount;
-                        }
+                        if(!t.paid) { toPay += t.amount; catStats[t.category] = (catStats[t.category] || 0) + t.amount; }
                     }
+
                     const tr = document.createElement('tr');
                     tr.className = `hover:bg-slate-50/50 transition-colors ${t.paid ? 'is-paid' : ''}`;
                     tr.innerHTML = `
-                        <td class="p-4 w-12"><button onclick="togglePaid(${t.id}, ${t.paid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${t.paid ? '✓' : ''}</button></td>
+                        <td class="p-4 w-10"><input type="checkbox" class="transaction-checkbox w-4 h-4 rounded border-slate-300" value="${t.id}" onchange="updateBulkUI()"></td>
+                        <td class="p-4 w-10"><button onclick="togglePaid(${t.id}, ${t.paid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${t.paid ? '✓' : ''}</button></td>
                         <td class="py-4 px-2">
                             <div class="text-sm font-semibold text-slate-700">${t.title}</div>
-                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">${t.category}</div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase">${t.category}</div>
                         </td>
                         <td class="p-4 text-right font-bold text-sm ${isInc ? 'text-emerald-500' : 'text-slate-600'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="p-4 text-right flex gap-3 justify-end">
-                            <button onclick="openEditModal(${t.id})" class="text-slate-300 hover:text-blue-500">📝</button>
-                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500">🗑️</button>
+                        <td class="p-4 text-right flex gap-2 justify-end">
+                            <button onclick="duplicateToMonths(${t.id})" title="Duplicar" class="text-slate-300 hover:text-amber-500 transition">📑</button>
+                            <button onclick="openEditModal(${t.id})" class="text-slate-300 hover:text-blue-500 transition">📝</button>
+                            <button onclick="deleteItem(${t.id})" class="text-slate-300 hover:text-rose-500 transition">🗑️</button>
                         </td>
                     `;
                     list.appendChild(tr);
@@ -331,63 +425,23 @@
             Object.keys(catStats).forEach(cat => {
                 const card = document.createElement('div');
                 card.className = "flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl";
-                card.innerHTML = `
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${cat}</p>
-                        <p class="text-xs font-bold text-rose-500">R$ ${catStats[cat].toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                    <button onclick="payCategory('${cat}')" class="bg-emerald-100 text-emerald-600 text-[10px] font-black px-3 py-2 rounded-xl hover:bg-emerald-600 hover:text-white transition uppercase">Quitar Tudo</button>
-                `;
+                card.innerHTML = `<div><p class="text-[10px] font-bold text-slate-400 uppercase">${cat}</p><p class="text-xs font-bold text-rose-500">R$ ${catStats[cat].toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div><button onclick="payCategory('${cat}')" class="bg-emerald-100 text-emerald-600 text-[10px] font-black px-3 py-2 rounded-xl uppercase">Quitar</button>`;
                 summaryBox.appendChild(card);
             });
 
             const net = inc - exp;
-            document.getElementById('balance-card').className = `p-4 rounded-2xl card-shadow col-span-1 text-center sm:text-left ${net >= 0 ? 'balance-positive' : 'balance-negative'}`;
+            document.getElementById('balance-card').className = `p-4 rounded-2xl card-shadow ${net >= 0 ? 'balance-positive' : 'balance-negative'}`;
             document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             document.getElementById('monthly-net-balance').innerText = `R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            updateBulkUI();
         }
 
-        async function payCategory(categoryName) {
-            const month = monthFilter.value;
-            const idsToUpdate = transactions.filter(t => t.category === categoryName && t.date.startsWith(month) && t.type === 'saida' && !t.paid).map(t => t.id);
-            if (idsToUpdate.length > 0 && confirm(`Quitar "${categoryName}"?`)) {
-                await _supabase.from('transacoes').update({ paid: true }).in('id', idsToUpdate);
-                loadData();
-            }
+        async function payCategory(cat) {
+            const ids = transactions.filter(t => t.category === cat && t.date.startsWith(monthFilter.value) && !t.paid && t.type === 'saida').map(t => t.id);
+            if (ids.length > 0 && confirm(`Quitar tudo de "${cat}" neste mês?`)) { await _supabase.from('transacoes').update({ paid: true }).in('id', ids); loadData(); }
         }
-
-        function openYearlySummary() {
-            const year = monthFilter.value.split('-')[0];
-            document.getElementById('display-year').innerText = year;
-            const container = document.getElementById('yearly-cards');
-            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-            let html = '';
-            for (let m = 1; m <= 12; m++) {
-                const monthStr = `${year}-${m.toString().padStart(2, '0')}`;
-                let inc = 0, exp = 0;
-                transactions.forEach(t => {
-                    if (t.date.startsWith(monthStr)) {
-                        if (t.type === 'entrada') inc += t.amount;
-                        else exp += t.amount;
-                    }
-                });
-                const net = inc - exp;
-                html += `
-                    <div class="bg-white p-4 rounded-3xl border border-slate-200 flex items-center justify-between shadow-sm">
-                        <div class="w-1/4"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${months[m-1]}</p></div>
-                        <div class="flex flex-1 justify-around text-center px-2">
-                            <div><p class="text-[8px] font-bold text-slate-300 uppercase">Entrada</p><p class="text-[11px] font-bold text-emerald-600">R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
-                            <div><p class="text-[8px] font-bold text-slate-300 uppercase">Saída</p><p class="text-[11px] font-bold text-rose-500">R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
-                        </div>
-                        <div class="w-1/4 text-right"><p class="text-xs font-black ${net >= 0 ? 'text-blue-600' : 'text-rose-700'}">R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
-                    </div>`;
-            }
-            container.innerHTML = html;
-            document.getElementById('yearly-summary-screen').classList.remove('hidden');
-        }
-        function closeYearlySummary() { document.getElementById('yearly-summary-screen').classList.add('hidden'); }
 
         document.getElementById('finance-form').onsubmit = saveData;
         monthFilter.onchange = loadData;
