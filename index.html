@@ -103,13 +103,15 @@
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-tight">Categoria</label>
                                 <div class="flex gap-1.5">
-                                    <select id="category" class="flex-1 p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-semibold text-slate-700 cursor-pointer" required></select>
+                                    <select id="category" class="flex-1 p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-semibold text-slate-700 cursor-pointer" required>
+                                        </select>
                                     <button type="button" onclick="toggleNewCategory()" class="bg-slate-100 border border-slate-200 text-slate-600 px-3 rounded-lg hover:bg-indigo-600 hover:text-white transition font-bold" title="Nova Categoria">+</button>
                                 </div>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-tight">Fluxo</label>
-                                <select id="type" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-semibold cursor-pointer">
+                                <select id="type" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-semibold cursor-pointer" required>
+                                    <option value="" disabled selected>Selecione</option>
                                     <option value="saida">🔴 Saída</option>
                                     <option value="entrada">🟢 Entrada</option>
                                 </select>
@@ -316,7 +318,10 @@
         function updateCategoryDropdown(selected = null) {
             const select = document.getElementById('category');
             let allCats = [...new Set([...transactions.map(t => t.category), ...Object.keys(categorySettings)])].filter(c => c).sort();
-            select.innerHTML = '';
+            
+            // Alteração: Campo Categoria agora começa com "Selecione"
+            select.innerHTML = '<option value="" disabled selected>Selecione uma categoria</option>'; 
+            
             allCats.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat; opt.text = cat;
