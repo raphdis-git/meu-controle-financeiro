@@ -3,162 +3,552 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finanças Pro | 2026</title>
+    <title>Finanças Pro - Dashboard Executivo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f1f5f9; 
-            color: #0f172a;
-            background-image: radial-gradient(circle at top right, #e2e8f0 0%, #f1f5f9 100%);
+            font-family: 'Inter', sans-serif; 
+            background-color: #f1f5f9; /* Slate 100 */
+            color: #1e293b; /* Slate 800 */
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
-        }
-        .is-paid { opacity: 0.4; filter: grayscale(1); text-decoration: line-through; }
+        .is-paid { opacity: 0.35; text-decoration: line-through; filter: grayscale(1); }
+        .card-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03); }
         
-        .gradient-income { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-        .gradient-expense { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .gradient-balance { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
-
-        .btn-primary {
-            background: #0f172a;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
+        /* Semântica Profissional */
+        .status-paid { background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; } /* Emerald */
+        .status-pending { background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; } /* Amber */
         
-        /* Animação suave para as barras */
-        .progress-bar-fill { transition: width 1.2s cubic-bezier(0.65, 0, 0.35, 1); }
-
+        /* Estilo SaaS para inputs */
         input, select {
-            transition: border-color 0.2s, box-shadow 0.2s;
+            transition: all 0.15s ease-in-out;
         }
-        input:focus {
-            border-color: #6366f1 !important;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+        input:focus, select:focus {
+            border-color: #4f46e5 !important; /* Indigo 600 */
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+        }
+
+        /* Overlay Profissional */
+        #edit-modal-overlay, #yearly-summary-screen, #transactions-screen { 
+            background-color: rgba(15, 23, 42, 0.6); /* Slate 900 com opacidade */
         }
     </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen">
+<body class="p-3 md:p-6 min-h-screen">
 
-    <div class="max-w-5xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+    <div class="max-w-7xl mx-auto space-y-6">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-xl border border-slate-100 card-shadow">
             <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="text-2xl">💎</span>
-                    <h1 class="text-2xl font-800 tracking-tight text-slate-900">Finanças<span class="text-indigo-600">Pro</span></h1>
-                </div>
-                <p class="text-xs text-slate-500 font-medium uppercase tracking-widest">Dashboard Executivo • 2026</p>
+                <h1 class="text-xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
+                    <span class="text-indigo-600">📊</span> Finanças Pro
+                </h1>
+                <p class="text-[11px] text-slate-400 font-medium uppercase tracking-widest">Dashboard de Gestão Pessoal • 2026</p>
             </div>
             
-            <div class="flex items-center gap-3 bg-white/50 p-2 rounded-2xl border border-white">
-                <input type="month" id="month-filter" class="bg-transparent px-3 py-1 outline-none text-indigo-600 font-bold text-sm cursor-pointer">
-                <div class="h-4 w-[1px] bg-slate-300"></div>
-                <button onclick="openYearlySummary()" class="text-[10px] font-bold px-3 py-1 hover:text-indigo-600 transition">ANUAL</button>
+            <div class="flex items-center gap-2">
+                <input type="month" id="month-filter" class="bg-slate-50 px-4 py-2 rounded-lg border border-slate-200 outline-none text-indigo-700 font-semibold text-sm cursor-pointer hover:bg-slate-100 transition">
+                <button onclick="openYearlySummary()" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-800 transition">ANUAL</button>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-            <div class="md:col-span-2 gradient-balance p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200/50 relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-indigo-100 text-[10px] font-bold uppercase tracking-widest mb-1">Saldo Disponível</p>
-                    <h2 id="monthly-net-balance" class="text-4xl font-800 mb-4">R$ 0,00</h2>
-                    <button onclick="openTransactions()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition">Detalhes da Nuvem</button>
-                </div>
-                <div class="absolute -right-4 -bottom-4 text-8xl opacity-10 group-hover:scale-110 transition-transform">💰</div>
-            </div>
-
-            <div class="glass-card p-6 rounded-[2rem] flex flex-col justify-center">
-                <p class="text-slate-400 text-[9px] font-bold uppercase mb-1">Entradas</p>
-                <h2 id="total-income" class="text-xl font-bold text-emerald-600 tracking-tight">R$ 0,00</h2>
-                <div class="w-full bg-emerald-50 h-1 mt-3 rounded-full overflow-hidden">
-                    <div class="bg-emerald-500 h-full w-2/3"></div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-100 card-shadow flex items-center gap-4">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg text-xl">↗</div>
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Entradas</p>
+                    <h2 id="total-income" class="text-xl font-bold text-slate-950">R$ 0,00</h2>
                 </div>
             </div>
-
-            <div class="glass-card p-6 rounded-[2rem] flex flex-col justify-center">
-                <p class="text-slate-400 text-[9px] font-bold uppercase mb-1">Saídas Fixas</p>
-                <h2 id="total-expense" class="text-xl font-bold text-rose-500 tracking-tight">R$ 0,00</h2>
-                <div class="w-full bg-rose-50 h-1 mt-3 rounded-full overflow-hidden">
-                    <div class="bg-rose-500 h-full w-1/2"></div>
+            <div class="bg-white p-5 rounded-xl border border-slate-100 card-shadow flex items-center gap-4">
+                <div class="p-3 bg-rose-50 text-rose-600 rounded-lg text-xl">↘</div>
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Saídas</p>
+                    <h2 id="total-expense" class="text-xl font-bold text-slate-950">R$ 0,00</h2>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-100 card-shadow flex items-center gap-4">
+                <div id="balance-icon" class="p-3 rounded-lg text-xl">=</div>
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Saldo Disponível</p>
+                    <h2 id="monthly-net-balance" class="text-xl font-bold text-slate-950">R$ 0,00</h2>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-100 card-shadow flex items-center gap-4 border-l-4 border-amber-300">
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg text-xl">⏳</div>
+                <div>
+                    <p class="text-xs font-medium text-amber-600 uppercase tracking-wider">Pendente</p>
+                    <h2 id="to-pay-balance" class="text-xl font-bold text-amber-900">R$ 0,00</h2>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-8">
-                <section class="glass-card p-8 rounded-[2.5rem]">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-sm font-800 uppercase tracking-widest text-slate-400">Novo Registro</h3>
-                        <span class="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase">Instantâneo</span>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                <section class="bg-white p-6 rounded-xl border border-slate-100 card-shadow">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Novo Registro</h3>
+                        <div class="flex gap-2">
+                            <button onclick="openTransactions()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition">Ver Movimentações</button>
+                            <button onclick="toggleManager()" class="text-xs font-semibold text-slate-400 hover:text-slate-600 transition">⚙️</button>
+                        </div>
                     </div>
                     
-                    <form id="finance-form" class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-800 text-slate-500 uppercase ml-1">O que você pagou?</label>
-                                <input type="text" id="title" placeholder="Ex: Assinatura Cloud" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-medium">
+                    <form id="finance-form" class="space-y-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div class="space-y-1">
+                                <label class="text-xs font-medium text-slate-500 ml-1">Descrição</label>
+                                <input type="text" id="title" placeholder="Ex: Assinatura Soft" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-medium text-slate-800">
                             </div>
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-800 text-slate-500 uppercase ml-1">Valor do Fluxo</label>
-                                <input type="text" id="amount" placeholder="R$ 0,00" class="w-full p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none font-800 text-indigo-600 text-lg">
+                            <div class="space-y-1">
+                                <label class="text-xs font-medium text-slate-500 ml-1">Valor</label>
+                                <input type="text" id="amount" placeholder="R$ 0,00" class="w-full p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg outline-none font-semibold text-indigo-700 text-sm">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="space-y-2 md:col-span-1">
-                                <label class="text-[10px] font-800 text-slate-500 uppercase ml-1">Categoria</label>
-                                <select id="category" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-bold text-slate-700"></select>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div class="space-y-1 md:col-span-1">
+                                <label class="text-xs font-medium text-slate-500 ml-1">Categoria</label>
+                                <select id="category" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-medium text-slate-700 cursor-pointer"></select>
                             </div>
-                            <div class="space-y-2 md:col-span-1">
-                                <label class="text-[10px] font-800 text-slate-500 uppercase ml-1">Tipo</label>
-                                <select id="type" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-bold">
-                                    <option value="saida">🔴 Débito</option>
-                                    <option value="entrada">🟢 Crédito</option>
+                            <div class="space-y-1 md:col-span-1">
+                                <label class="text-xs font-medium text-slate-500 ml-1">Tipo de Fluxo</label>
+                                <select id="type" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-medium cursor-pointer">
+                                    <option value="saida">🔴 Saída / Débito</option>
+                                    <option value="entrada">🟢 Entrada / Crédito</option>
                                 </select>
                             </div>
                             <div class="flex items-end">
-                                <button type="submit" class="btn-primary w-full text-white p-4 rounded-2xl font-bold text-sm uppercase tracking-widest">Confirmar Transação</button>
+                                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition shadow-sm">Processar Lançamento</button>
                             </div>
                         </div>
                     </form>
                 </section>
+                
+                <div id="add-cat-panel" class="hidden glass-card p-5 rounded-xl space-y-3">
+                    <input type="text" id="custom-cat-name" placeholder="Nome da Categoria" class="p-2 text-sm border border-slate-200 rounded-lg outline-none w-full bg-white">
+                    <button type="button" onclick="saveNewCategory()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold uppercase">Cadastrar Categoria</button>
+                </div>
 
-                <section class="glass-card p-8 rounded-[2.5rem]">
-                    <h3 class="text-sm font-800 uppercase tracking-widest text-slate-400 mb-6">Controle por Categoria</h3>
-                    <div id="category-summary" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
-                </section>
+                <div id="manager-panel" class="hidden glass-card p-5 rounded-xl space-y-2 text-center">
+                    <div id="my-categories-list" class="flex flex-wrap gap-2 justify-center"></div>
+                </div>
             </div>
 
-            <div class="space-y-6">
-                <div class="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl">
-                    <h4 class="text-amber-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Atenção Pendente</h4>
-                    <p class="text-3xl font-800 mb-2" id="to-pay-balance">R$ 0,00</p>
-                    <p class="text-slate-400 text-xs leading-relaxed">Este é o valor total de contas que você ainda não marcou como pagas neste mês.</p>
+            <section class="bg-white p-6 rounded-xl border border-slate-100 card-shadow h-fit space-y-4">
+                <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Status por Categoria</h3>
+                <div id="category-summary" class="space-y-2"></div>
+            </section>
+        </div>
+    </div>
+
+    <div id="transactions-screen" class="hidden fixed inset-0 z-[60] overflow-y-auto p-3 md:p-10">
+        <div class="max-w-6xl mx-auto bg-white rounded-xl border border-slate-100 shadow-2xl overflow-hidden mt-10">
+            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-950 uppercase tracking-tight">Registro de Movimentações</h2>
+                    <p id="transaction-month-label" class="text-xs font-medium text-indigo-600 uppercase tracking-wider"></p>
                 </div>
-                
-                <div class="glass-card p-6 rounded-[2rem] border-dashed border-2 border-slate-200 flex flex-col items-center justify-center text-center p-10">
-                    <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-xl mb-4 text-indigo-600">⚙️</div>
-                    <p class="text-sm font-bold text-slate-800 mb-1">Configurações</p>
-                    <p class="text-[10px] text-slate-400 mb-4">Gerencie suas categorias e regras de automação.</p>
-                    <button onclick="toggleManager()" class="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-800">Abrir Painel</button>
+                <button onclick="closeTransactions()" class="bg-white border border-slate-200 px-4 py-2 rounded-lg font-semibold text-xs text-slate-600 hover:bg-slate-100 transition">✕ FECHAR</button>
+            </header>
+
+            <div class="p-4 border-b border-slate-100 bg-white flex justify-between items-center min-h-[60px]">
+                <div id="bulk-actions" class="hidden flex gap-2 items-center">
+                    <span id="selected-count" class="text-xs font-medium text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">0 selecionados</span>
+                    <button onclick="bulkDuplicate()" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-amber-200 transition">Duplicar em Lote</button>
                 </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <tr>
+                            <th class="p-4 w-10">
+                                <input type="checkbox" id="select-all" onclick="toggleSelectAll()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
+                            </th>
+                            <th class="p-4 w-10">Pago</th>
+                            <th class="py-4 px-2">Descrição</th>
+                            <th class="p-4 text-right">Valor</th>
+                            <th class="p-4 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-list" class="divide-y divide-slate-100 font-medium text-slate-800"></tbody>
+                </table>
+            </div>
+            <div id="loading" class="p-20 text-center text-slate-400 font-medium text-xs uppercase tracking-widest">Sincronizando com o Supabase...</div>
+        </div>
+    </div>
+
+    <div id="yearly-summary-screen" class="hidden fixed inset-0 z-[60] overflow-y-auto p-3 md:p-10">
+        <div class="max-w-6xl mx-auto bg-white rounded-xl border border-slate-100 shadow-2xl overflow-hidden mt-10">
+            <header class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-950 uppercase tracking-tight">Análise Anual: <span id="display-year"></span></h2>
+                    <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Performance Consolidada de Caixa</p>
+                </div>
+                <button onclick="closeYearlySummary()" class="bg-white border border-slate-200 px-6 py-2 rounded-lg font-semibold text-xs text-slate-600 hover:bg-slate-100 transition shadow-sm">✕ FECHAR</button>
+            </header>
+            <div id="yearly-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50/50"></div>
+        </div>
+    </div>
+
+    <div id="edit-modal-overlay" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-xl p-6 shadow-2xl border border-slate-100 space-y-5">
+            <h3 class="text-lg font-bold text-slate-950">Editar Transação</h3>
+            <div class="space-y-4">
+                <input type="text" id="edit-title" placeholder="Título" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-medium">
+                <input type="text" id="edit-description" placeholder="Descrição" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none text-sm font-medium">
+                <input type="text" id="edit-amount" placeholder="Valor" class="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none font-semibold text-indigo-700 text-sm">
+            </div>
+            <div class="flex flex-col gap-2">
+                <button onclick="confirmEdit(true)" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold text-xs uppercase shadow-sm">Salvar em TODOS os futuros</button>
+                <button onclick="confirmEdit(false)" class="w-full bg-slate-100 text-slate-700 p-3 rounded-lg font-semibold text-xs uppercase">Apenas este mês</button>
+                <button onclick="closeEditModal()" class="w-full text-slate-400 text-xs font-medium uppercase mt-2 hover:text-rose-600 transition">Cancelar</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ... (Insira aqui todo o código JavaScript das respostas anteriores) ...
-        // Certifique-se de manter as funções loadData, render, saveData, confirmEdit, etc.
-        // O JS é o motor, o HTML/CSS acima é a nova carcaça.
+        const SUPABASE_URL = 'https://cxitsxuqxclucwdlwynp.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_bu8qGEMLijUsVzwQk0Of4w_30CJ2j-U';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let transactions = [];
+        let categorySettings = JSON.parse(localStorage.getItem('cat_settings')) || {};
+        let currentEditId = null;
+
+        const monthFilter = document.getElementById('month-filter');
+        monthFilter.value = new Date().toISOString().substring(0, 7);
+
+        // --- NAVEGAÇÃO E MODAIS ---
+        function openTransactions() { 
+            const [year, month] = monthFilter.value.split('-');
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            document.getElementById('transaction-month-label').innerText = `${months[parseInt(month)-1]} ${year}`;
+            document.getElementById('transactions-screen').classList.remove('hidden'); 
+        }
+        function closeTransactions() { document.getElementById('transactions-screen').classList.add('hidden'); }
+
+        function openYearlySummary() {
+            const year = monthFilter.value.split('-')[0];
+            document.getElementById('display-year').innerText = year;
+            const container = document.getElementById('yearly-cards');
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            
+            let html = '';
+            for (let m = 1; m <= 12; m++) {
+                const mStr = `${year}-${m.toString().padStart(2, '0')}`;
+                let inc = 0, exp = 0;
+                
+                transactions.forEach(t => { 
+                    if (t.date.startsWith(mStr)) { 
+                        if (t.type === 'entrada') inc += t.amount; else exp += t.amount; 
+                    } 
+                });
+
+                const balance = inc - exp;
+                const percentUsed = inc > 0 ? Math.min((exp / inc) * 100, 100) : (exp > 0 ? 100 : 0);
+                const barColor = percentUsed > 90 ? 'bg-rose-500' : (percentUsed > 70 ? 'bg-amber-500' : 'bg-emerald-500');
+
+                // Visual Profissional para os Cards Anuais
+                html += `
+                <div class="bg-white p-5 rounded-lg border border-slate-100 card-shadow space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <p class="text-xs font-semibold uppercase text-slate-500 tracking-wider">${months[m-1]}</p>
+                        <p class="font-semibold text-sm ${balance >= 0 ? 'text-emerald-700' : 'text-rose-700'}">
+                            ${balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 text-xs font-medium">
+                        <p class="text-slate-400">Entradas</p>
+                        <p class="text-right text-emerald-600">R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        
+                        <p class="text-slate-400">Saídas</p>
+                        <p class="text-right text-rose-600">R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="${barColor} h-full transition-all duration-1000" style="width: ${percentUsed}%"></div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+            document.getElementById('yearly-summary-screen').classList.remove('hidden');
+        }
+        function closeYearlySummary() { document.getElementById('yearly-summary-screen').classList.add('hidden'); }
+
+        // --- LÓGICA CORE ---
+        function toggleNewCategory() { document.getElementById('add-cat-panel').classList.toggle('hidden'); }
+        function toggleManager() { document.getElementById('manager-panel').classList.toggle('hidden'); if(!document.getElementById('manager-panel').classList.contains('hidden')) renderManager(); }
+        function toggleInstallments() { document.getElementById('installments-box').classList.toggle('hidden', document.getElementById('recurrence').value !== 'parcelado'); }
+
+        function setupCurrencyInput(id) {
+            document.getElementById(id).addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, "");
+                value = (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                e.target.value = value === 'R$ 0,00' ? '' : value;
+            });
+        }
+        setupCurrencyInput('amount');
+        setupCurrencyInput('edit-amount');
+
+        async function loadData() {
+            const { data, error } = await _supabase.from('transacoes').select('*').order('date', { ascending: true });
+            if (!error) { transactions = data; updateCategoryDropdown(); render(); }
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function updateCategoryDropdown(selected = null) {
+            const select = document.getElementById('category');
+            let allCats = [...new Set([...transactions.map(t => t.category), ...Object.keys(categorySettings)])].filter(c => c).sort();
+            select.innerHTML = '<option value="" disabled selected>Categoria...</option>';
+            allCats.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat; opt.text = cat;
+                select.add(opt);
+            });
+            if(selected) select.value = selected;
+        }
+
+        async function saveData(e) {
+            e.preventDefault();
+            const cat = document.getElementById('category').value;
+            const amount = parseFloat(document.getElementById('amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+            const [year, month] = monthFilter.value.split('-');
+            const recType = document.getElementById('recurrence').value;
+            let numRep = (recType === 'fixo') ? 12 : (recType === 'parcelado' ? (parseInt(document.getElementById('installments-count').value) || 2) : 1);
+            
+            let payloads = [];
+            for (let i = 0; i < numRep; i++) {
+                let d = new Date(year, parseInt(month)-1 + i, 1, 12, 0, 0);
+                let title = document.getElementById('title').value;
+                if(recType === 'parcelado') title += ` (${(i+1).toString().padStart(2,'0')}/${numRep})`;
+
+                payloads.push({ 
+                    title, amount, category: cat, 
+                    description: document.getElementById('description').value, 
+                    type: document.getElementById('type').value, 
+                    date: d.toISOString().split('T')[0], 
+                    mes_referencia: d.getMonth() + 1,
+                    ano_referencia: d.getFullYear(),
+                    paid: false 
+                });
+            }
+            await _supabase.from('transacoes').insert(payloads);
+            document.getElementById('finance-form').reset();
+            loadData();
+        }
+
+        function toggleNewCategory() { document.getElementById('add-cat-panel').classList.toggle('hidden'); }
+        function toggleManager() { document.getElementById('manager-panel').classList.toggle('hidden'); if(!document.getElementById('manager-panel').classList.contains('hidden')) renderManager(); }
+        
+        function saveNewCategory() {
+            const name = document.getElementById('custom-cat-name').value.trim();
+            if (name) {
+                categorySettings[name] = { day: '01' };
+                localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
+                updateCategoryDropdown(name); 
+                toggleNewCategory();
+                document.getElementById('custom-cat-name').value = '';
+            }
+        }
+
+        function removeCat(cat) {
+            if(confirm(`Excluir o atalho "${cat}"?`)) {
+                delete categorySettings[cat];
+                localStorage.setItem('cat_settings', JSON.stringify(categorySettings));
+                updateCategoryDropdown(); renderManager();
+            }
+        }
+
+        function renderManager() {
+            const container = document.getElementById('my-categories-list');
+            container.innerHTML = '';
+            Object.keys(categorySettings).sort().forEach(cat => {
+                const div = document.createElement('div');
+                div.className = "bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm";
+                div.innerHTML = `<span>${cat}</span><button onclick="removeCat('${cat}')" class="text-rose-400 font-bold hover:text-rose-600 ml-1">×</button>`;
+                container.appendChild(div);
+            });
+        }
+
+        // --- LÓGICA DE TABELA E SELEÇÃO ---
+        function updateBulkUI() {
+            const selected = document.querySelectorAll('.transaction-checkbox:checked');
+            const bulkBar = document.getElementById('bulk-actions');
+            const countLabel = document.getElementById('selected-count');
+            if (selected.length > 0) {
+                bulkBar.classList.remove('hidden');
+                countLabel.innerText = `${selected.length} selecionado(s)`;
+            } else {
+                bulkBar.classList.add('hidden');
+                document.getElementById('select-all').checked = false;
+            }
+        }
+
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('select-all').checked;
+            document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = isChecked);
+            updateBulkUI();
+        }
+
+        async function bulkDuplicate() {
+            const selected = document.querySelectorAll('.transaction-checkbox:checked');
+            const ids = Array.from(selected).map(cb => parseInt(cb.value));
+            const qtd = prompt(`Duplicar os ${ids.length} itens selecionados por quantos meses futuros?`, "1");
+            const num = parseInt(qtd);
+            if (isNaN(num) || num <= 0) return;
+            let payloads = [];
+            ids.forEach(id => {
+                const t = transactions.find(x => x.id === id);
+                if (!t) return;
+                const baseDate = new Date(t.date + 'T12:00:00');
+                for (let i = 1; i <= num; i++) {
+                    let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
+                    payloads.push({
+                        title: t.title, amount: t.amount, category: t.category, description: t.description, type: t.type,
+                        date: d.toISOString().split('T')[0], mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(), paid: false
+                    });
+                }
+            });
+            await _supabase.from('transacoes').insert(payloads);
+            loadData();
+        }
+
+        async function duplicateToMonths(id) {
+            const t = transactions.find(x => x.id === id);
+            const qtd = prompt(`Duplicar "${t.title}" para quantos meses futuros?`, "1");
+            const num = parseInt(qtd);
+            if (isNaN(num) || num <= 0) return;
+            let payloads = [];
+            const baseDate = new Date(t.date + 'T12:00:00');
+            for (let i = 1; i <= num; i++) {
+                let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
+                payloads.push({
+                    title: t.title, amount: t.amount, category: t.category, description: t.description, type: t.type,
+                    date: d.toISOString().split('T')[0], mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(), paid: false
+                });
+            }
+            await _supabase.from('transacoes').insert(payloads);
+            loadData();
+        }
+
+        async function deleteItem(id) {
+            const t = transactions.find(x => x.id === id);
+            if (confirm(`Excluir "${t.title}"?`)) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); }
+        }
+
+        function openEditModal(id) {
+            currentEditId = id;
+            const t = transactions.find(x => x.id === id);
+            document.getElementById('edit-title').value = t.title;
+            document.getElementById('edit-description').value = t.description || '';
+            document.getElementById('edit-amount').value = t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('edit-modal-overlay').classList.remove('hidden');
+        }
+        function closeEditModal() { document.getElementById('edit-modal-overlay').classList.add('hidden'); }
+
+        async function confirmEdit(prop) {
+            const t = transactions.find(x => x.id === currentEditId);
+            const val = parseFloat(document.getElementById('edit-amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+            const title = document.getElementById('edit-title').value;
+            const desc = document.getElementById('edit-description').value;
+            
+            if(prop) {
+                const base = t.title.split(' (')[0];
+                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).match({ category: t.category }).filter('title', 'ilike', `%${base}%`).gte('date', t.date);
+            } else {
+                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).eq('id', currentEditId);
+            }
+            closeEditModal(); loadData();
+        }
+
+        // --- RENDERIZAR TABELA ---
+        async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
+
+        function render() {
+            const list = document.getElementById('transaction-list');
+            const summaryBox = document.getElementById('category-summary');
+            list.innerHTML = ''; summaryBox.innerHTML = '';
+            let inc = 0, exp = 0, toPay = 0, catStats = {};
+
+            transactions.forEach(t => {
+                if (t.date.startsWith(monthFilter.value)) {
+                    const isInc = t.type === 'entrada';
+                    if (isInc) inc += t.amount; 
+                    else { 
+                        exp += t.amount; 
+                        if(!t.paid) { toPay += t.amount; catStats[t.category] = (catStats[t.category] || 0) + t.amount; }
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = `hover:bg-slate-50 transition-colors ${t.paid ? 'is-paid' : ''}`;
+                    
+                    // SaaS Table Row Visual
+                    tr.innerHTML = `
+                        <td class="p-4 w-10"><input type="checkbox" class="transaction-checkbox w-4 h-4 rounded border-slate-300 cursor-pointer" value="${t.id}" onchange="updateBulkUI()"></td>
+                        <td class="p-4 w-10">
+                            <button onclick="togglePaid(${t.id}, ${t.paid})" class="text-lg w-7 h-7 flex items-center justify-center rounded-lg ${t.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                                ${t.paid ? '✓' : '⌛'}
+                            </button>
+                        </td>
+                        <td class="py-4 px-2">
+                            <div class="font-semibold text-slate-900">${t.title}</div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${t.category}</div>
+                        </td>
+                        <td class="p-4 text-right font-bold text-base ${isInc ? 'text-emerald-600' : 'text-slate-950'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-4 text-right space-x-2 text-slate-400">
+                            <button onclick="duplicateToMonths(${t.id})" title="Duplicar" class="hover:text-amber-500">📑</button>
+                            <button onclick="openEditModal(${t.id})" title="Editar" class="hover:text-indigo-600">📝</button>
+                            <button onclick="deleteItem(${t.id})" title="Excluir" class="hover:text-rose-600">🗑️</button>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                }
+            });
+
+            // Status por Categoria Clean
+            Object.keys(catStats).forEach(cat => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg";
+                row.innerHTML = `
+                    <div class="w-1/2">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${cat}</p>
+                        <p class="text-xs font-semibold text-rose-600">R$ ${catStats[cat].toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                    <button onclick="payCategory('${cat}')" class="bg-white border border-slate-200 text-slate-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition uppercase">Quitar</button>
+                `;
+                summaryBox.appendChild(row);
+            });
+
+            // Cálculos e Visuais dos KPIs
+            const net = inc - exp;
+            const balanceCard = document.getElementById('balance-card');
+            const balanceIcon = document.getElementById('balance-icon');
+
+            if (net >= 0) {
+                balanceCard.classList.add('border-emerald-300');
+                balanceCard.classList.remove('border-rose-300');
+                balanceIcon.className = "p-3 bg-emerald-50 text-emerald-600 rounded-lg text-xl";
+                balanceIcon.innerText = "✓";
+            } else {
+                balanceCard.classList.add('border-rose-300');
+                balanceCard.classList.remove('border-emerald-300');
+                balanceIcon.className = "p-3 bg-rose-50 text-rose-600 rounded-lg text-xl";
+                balanceIcon.innerText = "✕";
+            }
+
+            document.getElementById('total-income').innerText = `R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('monthly-net-balance').innerText = `R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            updateBulkUI();
+        }
+
+        document.getElementById('finance-form').onsubmit = saveData;
+        monthFilter.onchange = loadData;
+        loadData();
     </script>
 </body>
 </html>
