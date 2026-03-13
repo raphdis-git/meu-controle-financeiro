@@ -6,7 +6,7 @@
     <title>Finanças Pro - Total Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
         .is-paid { opacity: 0.35; text-decoration: line-through; }
@@ -17,6 +17,10 @@
             backdrop-filter: blur(8px); 
             background-color: rgba(248, 250, 252, 0.95);
         }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -24,7 +28,7 @@
     <div class="max-w-3xl mx-auto pb-20">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
-                <h1 class="text-xl font-bold tracking-tight">💰 Finanças Cloud</h1>
+                <h1 class="text-xl font-bold tracking-tight text-slate-800">💰 Finanças Cloud</h1>
                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Gestão Pessoal 2026</p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -39,19 +43,19 @@
         </header>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow text-center md:text-left">
                 <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Entradas</p>
                 <h2 id="total-income" class="text-base font-bold text-emerald-600">R$ 0,00</h2>
             </div>
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow text-center md:text-left">
                 <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Saídas</p>
                 <h2 id="total-expense" class="text-base font-bold text-rose-500">R$ 0,00</h2>
             </div>
-            <div id="balance-card" class="p-4 rounded-2xl card-shadow transition-colors duration-500">
+            <div id="balance-card" class="p-4 rounded-2xl card-shadow transition-colors duration-500 text-center md:text-left">
                 <p class="text-[9px] font-bold opacity-70 uppercase mb-1">Saldo Livre</p>
                 <h2 id="monthly-net-balance" class="text-base font-bold">R$ 0,00</h2>
             </div>
-            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 card-shadow">
+            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 card-shadow text-center md:text-left">
                 <p class="text-[9px] font-bold text-amber-600 uppercase mb-1">Pendente</p>
                 <h2 id="to-pay-balance" class="text-base font-bold text-amber-700">R$ 0,00</h2>
             </div>
@@ -126,7 +130,7 @@
                     <h2 class="text-xl font-black text-slate-800 uppercase">Movimentações</h2>
                     <p id="transaction-month-label" class="text-[10px] font-bold text-blue-600 uppercase"></p>
                 </div>
-                <button onclick="closeTransactions()" class="bg-white border border-slate-200 px-4 py-2 rounded-2xl font-bold text-xs hover:bg-slate-50">✕ FECHAR</button>
+                <button onclick="closeTransactions()" class="bg-white border border-slate-200 px-4 py-2 rounded-2xl font-bold text-xs hover:bg-slate-50 transition">✕ FECHAR</button>
             </header>
 
             <div class="bg-white rounded-3xl border border-slate-200 card-shadow overflow-hidden">
@@ -152,8 +156,21 @@
                         <tbody id="transaction-list" class="divide-y divide-slate-50"></tbody>
                     </table>
                 </div>
-                <div id="loading" class="p-10 text-center text-slate-300 font-bold text-[10px] uppercase">Buscando na nuvem...</div>
+                <div id="loading" class="p-10 text-center text-slate-300 font-bold text-[10px] uppercase">Sincronizando...</div>
             </div>
+        </div>
+    </div>
+
+    <div id="yearly-summary-screen" class="hidden fixed inset-0 z-[60] overflow-y-auto p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Resumo <span id="display-year"></span></h2>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">Performance Financeira Anual</p>
+                </div>
+                <button onclick="closeYearlySummary()" class="bg-white border border-slate-200 px-6 py-2 rounded-2xl font-bold text-xs shadow-sm hover:bg-slate-50 transition">✕ VOLTAR</button>
+            </header>
+            <div id="yearly-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
     </div>
 
@@ -168,18 +185,8 @@
             <div class="flex flex-col gap-2">
                 <button onclick="confirmEdit(true)" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold text-xs uppercase">Salvar em TODOS os futuros</button>
                 <button onclick="confirmEdit(false)" class="w-full bg-slate-100 text-slate-700 p-3 rounded-xl font-bold text-xs uppercase">Apenas este mês</button>
-                <button onclick="closeEditModal()" class="w-full text-slate-400 text-xs font-bold uppercase">Cancelar</button>
+                <button onclick="closeEditModal()" class="w-full text-slate-400 text-xs font-bold uppercase mt-2">Cancelar</button>
             </div>
-        </div>
-    </div>
-
-    <div id="yearly-summary-screen" class="hidden fixed inset-0 z-[60] overflow-y-auto p-4 md:p-8">
-        <div class="max-w-3xl mx-auto">
-            <header class="flex justify-between items-center mb-8">
-                <h2 class="text-2xl font-black text-slate-800 uppercase">Resumo <span id="display-year"></span></h2>
-                <button onclick="closeYearlySummary()" class="bg-white border border-slate-200 px-4 py-2 rounded-2xl font-bold text-xs">✕ VOLTAR</button>
-            </header>
-            <div id="yearly-cards" class="space-y-3"></div>
         </div>
     </div>
 
@@ -195,7 +202,7 @@
         const monthFilter = document.getElementById('month-filter');
         monthFilter.value = new Date().toISOString().substring(0, 7);
 
-        // --- FUNÇÕES DE NAVEGAÇÃO ---
+        // --- NAVEGAÇÃO ---
         function openTransactions() { 
             const [year, month] = monthFilter.value.split('-');
             const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -208,13 +215,45 @@
             const year = monthFilter.value.split('-')[0];
             document.getElementById('display-year').innerText = year;
             const container = document.getElementById('yearly-cards');
-            const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            
             let html = '';
             for (let m = 1; m <= 12; m++) {
                 const mStr = `${year}-${m.toString().padStart(2, '0')}`;
                 let inc = 0, exp = 0;
-                transactions.forEach(t => { if (t.date.startsWith(mStr)) { if (t.type === 'entrada') inc += t.amount; else exp += t.amount; } });
-                html += `<div class="bg-white p-4 rounded-3xl border border-slate-200 flex items-center justify-between"><p class="text-xs font-black uppercase w-16">${months[m-1]}</p><div class="flex-1 flex justify-around"><p class="text-emerald-600 text-[11px] font-bold">R$ ${inc.toLocaleString('pt-BR')}</p><p class="text-rose-500 text-[11px] font-bold">R$ ${exp.toLocaleString('pt-BR')}</p></div><p class="font-black text-xs w-20 text-right">R$ ${(inc-exp).toLocaleString('pt-BR')}</p></div>`;
+                
+                transactions.forEach(t => { 
+                    if (t.date.startsWith(mStr)) { 
+                        if (t.type === 'entrada') inc += t.amount; else exp += t.amount; 
+                    } 
+                });
+
+                const balance = inc - exp;
+                const percentUsed = inc > 0 ? Math.min((exp / inc) * 100, 100) : (exp > 0 ? 100 : 0);
+                const barColor = percentUsed > 90 ? 'bg-rose-500' : (percentUsed > 70 ? 'bg-amber-500' : 'bg-emerald-500');
+
+                html += `
+                <div class="bg-white p-5 rounded-3xl border border-slate-200 card-shadow space-y-3">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10px] font-black uppercase text-slate-400 tracking-tighter">${months[m-1]}</p>
+                        <p class="font-black text-sm ${balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[9px] text-slate-400 uppercase font-bold">Ganhos</p>
+                            <p class="text-xs font-bold text-slate-700">R$ ${inc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] text-slate-400 uppercase font-bold">Gastos</p>
+                            <p class="text-xs font-bold text-slate-700">R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="${barColor} h-full transition-all duration-1000" style="width: ${percentUsed}%"></div>
+                    </div>
+                </div>`;
             }
             container.innerHTML = html;
             document.getElementById('yearly-summary-screen').classList.remove('hidden');
@@ -283,110 +322,7 @@
             loadData();
         }
 
-        function updateBulkUI() {
-            const selected = document.querySelectorAll('.transaction-checkbox:checked');
-            const bulkBar = document.getElementById('bulk-actions');
-            const countLabel = document.getElementById('selected-count');
-            
-            if (selected.length > 0) {
-                bulkBar.classList.remove('hidden');
-                countLabel.innerText = `${selected.length} selecionado(s)`;
-            } else {
-                bulkBar.classList.add('hidden');
-                document.getElementById('select-all').checked = false;
-            }
-        }
-
-        function toggleSelectAll() {
-            const isChecked = document.getElementById('select-all').checked;
-            document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = isChecked);
-            updateBulkUI();
-        }
-
-        async function bulkDuplicate() {
-            const selected = document.querySelectorAll('.transaction-checkbox:checked');
-            const ids = Array.from(selected).map(cb => parseInt(cb.value));
-            const qtd = prompt(`Duplicar os ${ids.length} itens selecionados por quantos meses futuros?`, "1");
-            const num = parseInt(qtd);
-            if (isNaN(num) || num <= 0) return;
-
-            let payloads = [];
-            ids.forEach(id => {
-                const t = transactions.find(x => x.id === id);
-                if (!t) return;
-                const baseDate = new Date(t.date + 'T12:00:00');
-                for (let i = 1; i <= num; i++) {
-                    let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
-                    payloads.push({
-                        title: t.title, amount: t.amount, category: t.category,
-                        description: t.description, type: t.type,
-                        date: d.toISOString().split('T')[0],
-                        mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(),
-                        paid: false
-                    });
-                }
-            });
-
-            const { error } = await _supabase.from('transacoes').insert(payloads);
-            if (error) alert("Erro: " + error.message);
-            else { alert(`${payloads.length} novos lançamentos criados!`); loadData(); }
-        }
-
-        async function duplicateToMonths(id) {
-            const t = transactions.find(x => x.id === id);
-            const qtd = prompt(`Duplicar "${t.title}" para quantos meses futuros?`, "1");
-            const num = parseInt(qtd);
-            if (isNaN(num) || num <= 0) return;
-
-            let payloads = [];
-            const baseDate = new Date(t.date + 'T12:00:00');
-            for (let i = 1; i <= num; i++) {
-                let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
-                payloads.push({
-                    title: t.title, amount: t.amount, category: t.category,
-                    description: t.description, type: t.type,
-                    date: d.toISOString().split('T')[0],
-                    mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(),
-                    paid: false
-                });
-            }
-            await _supabase.from('transacoes').insert(payloads);
-            loadData();
-        }
-
-        async function deleteItem(id) {
-            const t = transactions.find(x => x.id === id);
-            if (confirm(`Excluir "${t.title}"?`)) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); }
-        }
-
-        function openEditModal(id) {
-            currentEditId = id;
-            const t = transactions.find(x => x.id === id);
-            document.getElementById('edit-title').value = t.title;
-            document.getElementById('edit-description').value = t.description || '';
-            document.getElementById('edit-amount').value = t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('edit-modal-overlay').classList.remove('hidden');
-        }
-
-        function closeEditModal() { document.getElementById('edit-modal-overlay').classList.add('hidden'); }
-
-        async function confirmEdit(prop) {
-            const t = transactions.find(x => x.id === currentEditId);
-            const val = parseFloat(document.getElementById('edit-amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
-            const title = document.getElementById('edit-title').value;
-            const desc = document.getElementById('edit-description').value;
-            
-            if(prop) {
-                const base = t.title.split(' (')[0];
-                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).match({ category: t.category }).filter('title', 'ilike', `%${base}%`).gte('date', t.date);
-            } else {
-                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).eq('id', currentEditId);
-            }
-            closeEditModal(); loadData();
-        }
-
-        async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
-
+        // --- RENDERIZAÇÃO E UI ---
         function render() {
             const list = document.getElementById('transaction-list');
             const summaryBox = document.getElementById('category-summary');
@@ -403,7 +339,7 @@
                     }
 
                     const tr = document.createElement('tr');
-                    tr.className = `hover:bg-slate-50/50 transition-colors ${t.paid ? 'is-paid' : ''}`;
+                    tr.className = `hover:bg-slate-50 transition-colors ${t.paid ? 'is-paid' : ''}`;
                     tr.innerHTML = `
                         <td class="p-4 w-10"><input type="checkbox" class="transaction-checkbox w-4 h-4 rounded border-slate-300" value="${t.id}" onchange="updateBulkUI()"></td>
                         <td class="p-4 w-10"><button onclick="togglePaid(${t.id}, ${t.paid})" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${t.paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200'}">${t.paid ? '✓' : ''}</button></td>
@@ -435,12 +371,75 @@
             document.getElementById('total-expense').innerText = `R$ ${exp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             document.getElementById('monthly-net-balance').innerText = `R$ ${net.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             document.getElementById('to-pay-balance').innerText = `R$ ${toPay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            updateBulkUI();
+        }
+
+        // --- AÇÕES ---
+        async function togglePaid(id, status) { await _supabase.from('transacoes').update({ paid: !status }).eq('id', id); loadData(); }
+        async function deleteItem(id) { if (confirm(`Excluir este lançamento?`)) { await _supabase.from('transacoes').delete().eq('id', id); loadData(); } }
+        
+        function openEditModal(id) {
+            currentEditId = id;
+            const t = transactions.find(x => x.id === id);
+            document.getElementById('edit-title').value = t.title;
+            document.getElementById('edit-description').value = t.description || '';
+            document.getElementById('edit-amount').value = t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('edit-modal-overlay').classList.remove('hidden');
+        }
+        function closeEditModal() { document.getElementById('edit-modal-overlay').classList.add('hidden'); }
+
+        async function confirmEdit(prop) {
+            const t = transactions.find(x => x.id === currentEditId);
+            const val = parseFloat(document.getElementById('edit-amount').value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+            const title = document.getElementById('edit-title').value;
+            const desc = document.getElementById('edit-description').value;
+            
+            if(prop) {
+                const base = t.title.split(' (')[0];
+                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).match({ category: t.category }).filter('title', 'ilike', `%${base}%`).gte('date', t.date);
+            } else {
+                await _supabase.from('transacoes').update({ title, amount: val, description: desc }).eq('id', currentEditId);
+            }
+            closeEditModal(); loadData();
         }
 
         async function payCategory(cat) {
             const ids = transactions.filter(t => t.category === cat && t.date.startsWith(monthFilter.value) && !t.paid && t.type === 'saida').map(t => t.id);
             if (ids.length > 0 && confirm(`Quitar tudo de "${cat}" neste mês?`)) { await _supabase.from('transacoes').update({ paid: true }).in('id', ids); loadData(); }
+        }
+
+        async function duplicateToMonths(id) {
+            const t = transactions.find(x => x.id === id);
+            const qtd = prompt(`Duplicar "${t.title}" para quantos meses futuros?`, "1");
+            const num = parseInt(qtd);
+            if (isNaN(num) || num <= 0) return;
+            let payloads = [];
+            const baseDate = new Date(t.date + 'T12:00:00');
+            for (let i = 1; i <= num; i++) {
+                let d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
+                payloads.push({
+                    title: t.title, amount: t.amount, category: t.category, description: t.description, type: t.type,
+                    date: d.toISOString().split('T')[0], mes_referencia: d.getMonth() + 1, ano_referencia: d.getFullYear(), paid: false
+                });
+            }
+            await _supabase.from('transacoes').insert(payloads);
+            loadData();
+        }
+
+        function updateBulkUI() {
+            const selected = document.querySelectorAll('.transaction-checkbox:checked');
+            const bulkBar = document.getElementById('bulk-actions');
+            if (selected.length > 0) {
+                bulkBar.classList.remove('hidden');
+                document.getElementById('selected-count').innerText = `${selected.length} selecionado(s)`;
+            } else {
+                bulkBar.classList.add('hidden');
+            }
+        }
+
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('select-all').checked;
+            document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = isChecked);
+            updateBulkUI();
         }
 
         document.getElementById('finance-form').onsubmit = saveData;
