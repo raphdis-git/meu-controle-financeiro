@@ -150,7 +150,9 @@ const SUPABASE_KEY = "sb_publishable_Cdu7visHyN6QZUQ5mBmeLA_zrDOx-S9";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const CARDS_KEY = "finance_cards_v3";
 const CATEGORIES_KEY = "finance_categories_v3";
-const defaultCards = ["Nubank", "Itau", "Inter", "C6", "Geral"];
+const FALLBACK_CARD = "Outros";
+const FALLBACK_CATEGORY = "Outros";
+const defaultCards = ["Nubank", "Itau", "Inter", "C6"];
 const defaultCategories = ["Alimentacao", "Transporte", "Moradia", "Saude", "Compras", "Lazer", "Receita", "Geral"];
 const state = { transactions: [], cards: loadList(CARDS_KEY, defaultCards), categories: loadList(CATEGORIES_KEY, defaultCategories), selectedCard: "Nubank", tableCard: "all", modalMode: null, editingValue: null };
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -158,7 +160,8 @@ const monthFilter = document.querySelector("#month-filter");
 monthFilter.value = new Date().toISOString().slice(0, 7);
 function loadList(key, fallback) { try { const parsed = JSON.parse(localStorage.getItem(key)); return Array.isArray(parsed) && parsed.length ? parsed : fallback; } catch { return fallback; } }
 function saveList(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
-function ensureBaseItems() { if (!state.cards.includes("Geral")) state.cards.push("Geral"); if (!state.categories.includes("Geral")) state.categories.push("Geral"); }
+function ensureBaseItems() { if (!state.cards.length) state.cards.push(FALLBACK_CARD); if (!state.categories.length) state.categories.push(FALLBACK_CATEGORY); }
+function fallbackName(list, deletedName, preferred) { return list.find((item) => item !== deletedName) || preferred; }
 function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
 function parseMoney(value) { return Number(String(value).replace(/\D/g, "")) / 100 || 0; }
 function formatDate(value) { const [y, m, d] = value.split("-"); return `${d}/${m}/${y}`; }
@@ -196,7 +199,7 @@ function renderMetrics() {
   document.querySelector("#open-card-bills").textContent = money.format(openBills);
 }
 function renderSelectedCard() {
-  if (!state.cards.includes(state.selectedCard)) state.selectedCard = state.cards[0] || "Geral";
+  if (!state.cards.includes(state.selectedCard)) state.selectedCard = state.cards[0] || FALLBACK_CARD;
   const rows = cardRows(state.selectedCard);
   const total = sum(rows);
   const paid = sum(rows, (item) => item.paid);
@@ -220,7 +223,7 @@ function renderTable() {
   rows.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id).forEach((item) => {
     const isExpense = item.type === "saida";
     const installment = `${item.installment_number || 1}/${item.installments_total || 1}`;
-    body.insertAdjacentHTML("beforeend", `<tr class="hover:bg-slate-50"><td class="border-b border-slate-100 px-3 py-3 font-bold text-slate-600">${formatDate(item.date)}</td><td class="border-b border-slate-100 px-3 py-3"><strong class="block text-fit">${escapeHtml(item.title)}</strong></td><td class="border-b border-slate-100 px-3 py-3">${escapeHtml(item.category)}</td><td class="border-b border-slate-100 px-3 py-3">${escapeHtml(item.card || "Geral")}</td><td class="border-b border-slate-100 px-3 py-3">${installment}</td><td class="border-b border-slate-100 px-3 py-3 text-right font-extrabold ${isExpense ? "text-rose-600" : "text-emerald-700"}">${isExpense ? "- " : "+ "}${money.format(Number(item.amount || 0))}</td><td class="border-b border-slate-100 px-3 py-3"><span class="rounded-full px-2 py-1 text-xs font-extrabold ${item.paid ? "pill-paid" : "pill-open"}">${item.paid ? "Pago" : "Pendente"}</span></td><td class="border-b border-slate-100 px-3 py-3 text-right"><button class="mr-2 font-extrabold text-teal-700" data-toggle="${item.id}">${item.paid ? "Reabrir" : "Pagar"}</button><button class="font-extrabold text-rose-600" data-delete="${item.id}">Excluir</button></td></tr>`);
+    body.insertAdjacentHTML("beforeend", `<tr class="hover:bg-slate-50"><td class="border-b border-slate-100 px-3 py-3 font-bold text-slate-600">${formatDate(item.date)}</td><td class="border-b border-slate-100 px-3 py-3"><strong class="block text-fit">${escapeHtml(item.title)}</strong></td><td class="border-b border-slate-100 px-3 py-3">${escapeHtml(item.category)}</td><td class="border-b border-slate-100 px-3 py-3">${escapeHtml(item.card || FALLBACK_CARD)}</td><td class="border-b border-slate-100 px-3 py-3">${installment}</td><td class="border-b border-slate-100 px-3 py-3 text-right font-extrabold ${isExpense ? "text-rose-600" : "text-emerald-700"}">${isExpense ? "- " : "+ "}${money.format(Number(item.amount || 0))}</td><td class="border-b border-slate-100 px-3 py-3"><span class="rounded-full px-2 py-1 text-xs font-extrabold ${item.paid ? "pill-paid" : "pill-open"}">${item.paid ? "Pago" : "Pendente"}</span></td><td class="border-b border-slate-100 px-3 py-3 text-right"><button class="mr-2 font-extrabold text-teal-700" data-toggle="${item.id}">${item.paid ? "Reabrir" : "Pagar"}</button><button class="font-extrabold text-rose-600" data-delete="${item.id}">Excluir</button></td></tr>`);
   });
   body.querySelectorAll("[data-toggle]").forEach((button) => button.addEventListener("click", () => togglePaid(button.dataset.toggle)));
   body.querySelectorAll("[data-delete]").forEach((button) => button.addEventListener("click", () => deleteItem(button.dataset.delete)));
@@ -246,8 +249,9 @@ async function loadData() {
   state.transactions = data || [];
   const existingCards = [...new Set(state.transactions.map((item) => item.card).filter(Boolean))];
   const existingCategories = [...new Set(state.transactions.map((item) => item.category).filter(Boolean))];
-  state.cards = [...new Set([...state.cards, ...existingCards, "Geral"] )];
-  state.categories = [...new Set([...state.categories, ...existingCategories, "Geral"] )];
+  state.cards = [...new Set([...state.cards, ...existingCards])];
+  state.categories = [...new Set([...state.categories, ...existingCategories])];
+  ensureBaseItems();
   render();
 }
 async function saveTransaction(event) {
@@ -336,15 +340,16 @@ async function saveModal(event) {
 async function deleteCurrentCard() {
   const card = state.selectedCard;
   if (!card) return;
-  if (card === "Geral") { alert("O cartao Geral nao pode ser excluido."); return; }
+  const replacement = fallbackName(state.cards, card, FALLBACK_CARD);
   const used = state.transactions.some((item) => item.card === card);
-  const message = used ? `Excluir o cartao ${card}? Os gastos antigos serao movidos para Geral.` : `Excluir o cartao ${card}?`;
+  const message = used ? `Excluir o cartao ${card}? Os gastos antigos serao movidos para ${replacement}.` : `Excluir o cartao ${card}?`;
   if (!confirm(message)) return;
   let error = null;
-  if (used) ({ error } = await db.from("transacoes").update({ card: "Geral" }).eq("card", card));
+  if (used) ({ error } = await db.from("transacoes").update({ card: replacement }).eq("card", card));
   if (error) { alert(`Nao foi possivel excluir o cartao: ${error.message || "erro desconhecido"}`); return; }
   state.cards = state.cards.filter((item) => item !== card);
-  state.selectedCard = state.cards[0] || "Geral";
+  if (!state.cards.length) state.cards = [replacement];
+  state.selectedCard = state.cards[0];
   if (state.tableCard === card) state.tableCard = "all";
   saveList(CARDS_KEY, state.cards);
   await loadData();
@@ -352,14 +357,15 @@ async function deleteCurrentCard() {
 async function deleteSelectedCategory() {
   const category = document.querySelector("#category").value;
   if (!category) { alert("Selecione uma categoria para excluir."); return; }
-  if (category === "Geral") { alert("A categoria Geral nao pode ser excluida."); return; }
+  const replacement = fallbackName(state.categories, category, FALLBACK_CATEGORY);
   const used = state.transactions.some((item) => item.category === category);
-  const message = used ? `Excluir a categoria ${category}? Os gastos antigos serao movidos para Geral.` : `Excluir a categoria ${category}?`;
+  const message = used ? `Excluir a categoria ${category}? Os gastos antigos serao movidos para ${replacement}.` : `Excluir a categoria ${category}?`;
   if (!confirm(message)) return;
   let error = null;
-  if (used) ({ error } = await db.from("transacoes").update({ category: "Geral" }).eq("category", category));
+  if (used) ({ error } = await db.from("transacoes").update({ category: replacement }).eq("category", category));
   if (error) { alert(`Nao foi possivel excluir a categoria: ${error.message || "erro desconhecido"}`); return; }
   state.categories = state.categories.filter((item) => item !== category);
+  if (!state.categories.length) state.categories = [replacement];
   saveList(CATEGORIES_KEY, state.categories);
   await loadData();
 }
