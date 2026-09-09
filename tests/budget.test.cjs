@@ -52,10 +52,14 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  context.fixedId=fixedId;
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),1,2026).due",context),'2026-02-28');
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),1,2028).due",context),'2028-02-29');
- await vm.runInContext("(async()=>{openEdit(fixedId,0,2026);$('#status').value='paid';$('#actual').value='100';$('#paiddate').value='2026-01-31';await $('#editform').onsubmit({preventDefault(){}});openEdit(fixedId,1,2026);$('#value').value='125';await $('#editform').onsubmit({preventDefault(){}});openEdit(fixedId,2,2026);$('#value').value='200';$('#repeat-scope').value='future';await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ await vm.runInContext("(async()=>{openEdit(fixedId,0,2026);$('#entry-description').value='Somente janeiro';$('#status').value='paid';$('#actual').value='100';$('#paiddate').value='2026-01-31';await $('#editform').onsubmit({preventDefault(){}});openEdit(fixedId,1,2026);$('#value').value='125';await $('#editform').onsubmit({preventDefault(){}});openEdit(fixedId,2,2026);$('#entry-description').value='Plano mensal atualizado';$('#value').value='200';$('#repeat-scope').value='future';await $('#editform').onsubmit({preventDefault(){}})})()",context);
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),0,2026).paid",context),true);
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),1,2026).value",context),125);
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),3,2026).value",context),200);
+ assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),0,2026).description",context),'Somente janeiro');
+ assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),1,2026).description",context),'');
+ assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),3,2026).description",context),'Plano mensal atualizado');
+
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),3,2026).due",context),'2026-04-30');
  await vm.runInContext("(async()=>{openEdit(fixedId,3,2026);await $('#delete-current').onclick();await loadBudget(currentUser)})()",context);
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),3,2026).value",context),null);
@@ -67,6 +71,17 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  fail=true;
  await vm.runInContext("(async()=>{openEdit(fixedId,6,2026);$('#value').value='300';$('#due').value='2026-07-10';$('#repeat-monthly').checked=true;await $('#editform').onsubmit({preventDefault(){}})})()",context);
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),7,2026).value",context),null);fail=false;
+ await vm.runInContext("(async()=>{openEdit(1,0,2026);$('#entry-description').value='<b>Salário</b>\\nInclui adicional';await $('#editform').onsubmit({preventDefault(){}});await loadBudget(currentUser);openEdit(1,0,2026)})()",context);
+ assert.equal(elements['#entry-description'].value,'<b>Salário</b>\nInclui adicional');
+ assert.equal(stored.records['1-2026-0'].value,2000.5);
+ const descriptionBefore=stored.records['1-2026-0'].description;
+ await vm.runInContext("(async()=>{$('#entry-description').value='x'.repeat(2001);await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['1-2026-0'].description,descriptionBefore);
+ fail=true;
+ await vm.runInContext("(async()=>{$('#entry-description').value='Não salvo';await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['1-2026-0'].description,descriptionBefore);fail=false;
+ await vm.runInContext("(async()=>{openEdit(1,0,2026);$('#entry-description').value='';await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['1-2026-0'].description,'');
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});
