@@ -10,7 +10,7 @@ function restore(document){
  rows.splice(0,rows.length,...structuredClone(document.rows));
  for(const k of Object.keys(records))delete records[k];
  Object.assign(records,structuredClone(document.records));archived.clear();document.archived.forEach(p=>archived.add(p));
- const years=new Set([...Object.keys(records).map(k=>Number(k.split('-')[1])),...document.archived.map(p=>Math.floor(p/12))]);
+ const years=new Set([...Object.keys(records).map(k=>Number(k.split('-')[1])),...document.archived.map(p=>Math.floor(p/12)),...document.rows.flatMap(r=>(r.recurrences||[]).map(rule=>Math.floor(rule.start/12)))]);
  for(const y of years)if(Number.isInteger(y)&&!Array.from($('#year').options).some(o=>Number(o.value)===y))$('#year').add(new Option(String(y),String(y)));
  render();
 }

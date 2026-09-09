@@ -9,6 +9,7 @@ Abra o GitHub Pages do repositório, crie uma conta com e-mail e senha, confirme
 - Fatura: total manual prevalece sobre a soma das compras; a diferença aparece para conferência.
 - Parcelas: distribuídas em centavos exatos, com meses futuros e mudança de ano.
 - Exclusão: somente o mês escolhido ou esse mês e os próximos; meses anteriores preservados. Nos cartões, remove a fatura inteira e as compras dos meses selecionados.
+- Contas fixas: opção no cadastro e no lançamento mensal; define início, valor (inclusive soma com =) e dia do vencimento. Regras mensais ficam salvas e geram previsões ao consultar qualquer ano, sem criar cópias ilimitadas. Dia 31 é limitado ao último dia de cada mês. Editar só o mês cria uma exceção; editar os próximos altera a regra a partir daquele mês, preservando pagamentos já registrados e exclusões explícitas. Excluir um mês deixa uma exceção; excluir desse mês em diante encerra a regra.
 - Arquivamento: disponível quando todas as despesas daquele mês estiverem pagas. Novas pendências reabrem o mês.
 - Falha de salvamento: a interface restaura o último estado confirmado e informa o erro.
 - Edição simultânea: uma revisão impede sobrescrever silenciosamente alterações de outra janela. Atualize os dados antes de tentar novamente.
