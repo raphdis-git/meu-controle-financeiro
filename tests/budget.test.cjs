@@ -27,6 +27,18 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  storedRevision++;
  await vm.runInContext(`(async()=>{openEdit(14,10,2026);$('#manual').value='555';await $('#editform').onsubmit({preventDefault(){}})})()`,context);
  assert.notEqual(stored.records['14-2026-10'].manual,555);assert.match(elements['#sync-status'].textContent,/Outra janela/);
+ await vm.runInContext('loadBudget(currentUser)',context);
+ const recordsBeforeRename=structuredClone(stored.records);
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-name').value='Nubank pessoal';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.rows.find(r=>r.id===14).name,'Nubank pessoal');assert.deepEqual(stored.records,recordsBeforeRename);
+ await vm.runInContext("(async()=>{openRowEdit(6);$('#row-name').value='Internet casa';$('#row-group').value='4';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.rows.find(r=>r.id===6).group,4);assert.deepEqual(stored.records,recordsBeforeRename);
+ fail=true;
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-name').value='Nome não salvo';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(vm.runInContext("rows.find(r=>r.id===14).name",context),'Nubank pessoal');assert.equal(elements['#row-editor'].open,true);
+ fail=false;
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-name').value='Nome';$('#row-group').value='1';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.rows.find(r=>r.id===14).group,7);
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});

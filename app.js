@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s),fmt=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];const groups=['Renda familiar','Habitação','Saúde','Automóvel','Outras despesas','Lazer','Investimentos e compromissos','Cartões de crédito'];let selectedMonth=new Date().getMonth(),active=null,draft=null;const records={};const archived=new Set();
+const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];const groups=['Renda familiar','Habitação','Saúde','Automóvel','Outras despesas','Lazer','Investimentos e compromissos','Cartões de crédito'];let selectedMonth=new Date().getMonth(),active=null,draft=null,editingRowId=null;const records={};const archived=new Set();
 const rows=[['Salário Raphael',0,4200],['Salário Aira',0,2800],['Condomínio Apartamento',1,380],['Equatorial Apartamento',1,165],['Saneago Apartamento',1,85],['Internet',1,100],['Amil Dental Raphael',2,65],['Combustível',3,180],['IPVA Moto',3,55],['Academia / CrossFit',4,150],['Reserva de emergência',4,300],['Lanche',5,120],['Financiamento Apartamento',6,1100],['Nubank Raphael',7,450],['Nubank Aira',7,320],['BMG',7,140],['Renner',7,80],['Mercado Pago',7,180],['Caixa',7,210]].map((r,i)=>({id:i+1,name:r[0],group:r[1],example:r[2]}));
 function key(r,m,y=$('#year').value){return `${r.id}-${y}-${m}`}function blank(){return{value:null,manual:null,paid:false,actual:null,due:'',paiddate:'',purchases:[]}}function rec(r,m,y){return records[key(r,m,y)]||blank()}function total(r,c){return r.group===7?(c.manual!==null?c.manual:c.purchases.reduce((a,b)=>a+b.cents,0)/100):c.value??0}function exists(r,c){return r.group===7?c.manual!==null||c.purchases.length>0:c.value!==null}function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}let suppressToast=false,lastToast='';function toast(t){if(suppressToast){lastToast=t;return}$('#toast').textContent=t;$('#toast').style.display='block';setTimeout(()=>$('#toast').style.display='none',2400)}
 const currentYear=new Date().getFullYear();$('#year').innerHTML=Array.from({length:8},(_,i)=>currentYear-2+i).map(y=>`<option>${y}</option>`).join('');$('#year').value=String(currentYear);
@@ -24,11 +24,11 @@ function render(){
  archiveControl();
  let h='<thead><tr><th>Conta / cartão</th>'+periods.map(p=>`<th class="${p===y*12+selectedMonth?'selected':''}">${months[p%12].slice(0,3)} ${Math.floor(p/12)}${archived.has(p)?'<small class="archived-label">Arquivado</small>':''}</th>`).join('')+'</tr></thead><tbody>';
  groups.forEach((g,gi)=>{h+=`<tr class="group"><th>${g.toLocaleUpperCase('pt-BR')}</th>${periods.length?`<td colspan="${periods.length}"></td>`:''}</tr>`;rows.filter(r=>r.group===gi).forEach(r=>{
- h+=`<tr><th>${esc(r.name)}</th>`;
+ h+=`<tr><th><div class="row-heading"><span>${esc(r.name)}</span><button type="button" class="edit-name" data-edit-row="${r.id}" aria-label="Editar ${esc(r.name)}" title="Editar ${esc(r.name)}"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m16 3 5 5-12 12-6 1 1-6Z M13 6l5 5"/></svg></button></div></th>`;
  for(const p of periods){const m=p%12,yr=Math.floor(p/12),c=rec(r,m,yr),has=exists(r,c),late=has&&!c.paid&&c.due&&c.due<today();h+=`<td class="${p===y*12+selectedMonth?'selected':''}"><button class="cell ${c.paid?'paid':late?'late':''}" data-row="${r.id}" data-month="${m}" data-year="${yr}" aria-label="${esc(r.name)}, ${periodLabel(p)}, ${has?fmt(total(r,c)):'sem lançamento'}, ${c.paid?'pago':late?'atrasado':'pendente'}">${has?`<span class="tick">${c.paid?'✓':late?'!':''}</span>${fmt(total(r,c))}`:'—'}</button></td>`}h+='</tr>'})});
  h+='</tbody><tfoot>';
  for(const [label,filter]of[['Receitas',r=>r.group===0],['Despesas',r=>r.group!==0],['Saldo previsto',()=>true]]){h+=`<tr><th>${label}</th>`;for(const p of periods){const t=rows.filter(filter).reduce((a,r)=>a+total(r,rec(r,p%12,Math.floor(p/12)))*(label==='Saldo previsto'&&r.group!==0?-1:1),0);h+=`<td>${fmt(t)}</td>`}h+='</tr>'}
- $('#budget').innerHTML=h+'</tfoot>';document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.row,+b.dataset.month,+b.dataset.year));
+ $('#budget').innerHTML=h+'</tfoot>';document.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>openRowEdit(Number(b.dataset.editRow)));document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.row,+b.dataset.month,+b.dataset.year));
 }
 function openEdit(id,m,y=Number($('#year').value)){active={row:rows.find(r=>r.id===id),m,y};draft=structuredClone(rec(active.row,m,y));$('#title').textContent=active.row.name;$('#period').textContent=`${months[m]} de ${active.y}`;const card=active.row.group===7;$('#delete-row').textContent=card?'Excluir cartão':'Excluir conta';$('#ordinary').hidden=card;$('#cardarea').hidden=!card;$('#value').value=draft.value??'';$('#manual').value=draft.manual??'';$('#due').value=draft.due;$('#status').value=draft.paid?'paid':'open';$('#actual').value=draft.actual??'';$('#paiddate').value=draft.paiddate;$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#parts').value=1;$('#error').textContent='';payment();bill();$('#editor').showModal()}
 function payment(){$('#payment').hidden=$('#status').value!=='paid'}function bill(){if(!active||active.row.group!==7)return;const sum=draft.purchases.reduce((a,b)=>a+b.cents,0)/100;const manual=$('#manual').value;$('#billstats').innerHTML=`Compras registradas: <strong>${fmt(sum)}</strong><br>Total no orçamento: <strong>${fmt(manual===''?sum:Number(manual))}</strong>${manual!==''?`<br>Diferença a conferir: <strong>${fmt(Number(manual)-sum)}</strong>`:''}`;$('#purchases').innerHTML=draft.purchases.map(p=>`<div class="purchase"><span>${esc(p.title)} · ${p.part}/${p.parts}</span><strong>${fmt(p.cents/100)}</strong></div>`).join('')}
@@ -67,4 +67,26 @@ $('#archive-month').onclick=()=>{
  if(!canArchive(p))return;
  if(!confirm(`Arquivar ${periodLabel(p)}? A coluna ficará oculta. O histórico e os totais serão preservados.`))return;
  archived.add(p);render();toast('Mês arquivado. Consulte em Mostrar meses arquivados.');
+};
+
+function allowedRowGroups(row){return groups.map((_,i)=>i).filter(i=>row.group===7?i===7:row.group===0?i===0:i>0&&i<7)}
+function openRowEdit(id){
+ const row=rows.find(r=>r.id===id);if(!row)return;
+ editingRowId=id;
+ $('#row-editor-title').textContent=row.group===7?'Editar cartão':'Editar conta';
+ $('#row-name').value=row.name;
+ $('#row-group').innerHTML=allowedRowGroups(row).map(i=>`<option value="${i}">${groups[i]}</option>`).join('');
+ $('#row-group').value=String(row.group);$('#row-group').disabled=row.group===0||row.group===7;
+ $('#row-edit-help').textContent=row.group===7?'O nome será atualizado em todas as faturas. As compras e parcelas serão preservadas.':row.group===0?'O nome será atualizado em todos os meses. Os recebimentos serão preservados.':'O nome e a categoria serão atualizados em todos os meses. Os lançamentos serão preservados.';
+ $('#row-edit-error').textContent='';$('#row-editor').showModal();
+}
+$('#row-edit-cancel').onclick=()=>{$('#row-editor').close();editingRowId=null};
+$('#row-edit-form').onsubmit=e=>{
+ e.preventDefault();
+ const row=rows.find(r=>r.id===editingRowId);if(!row)return;
+ const name=$('#row-name').value.trim(),group=Number($('#row-group').value);
+ if(!name||name.length>120){$('#row-edit-error').textContent='Informe um nome de até 120 caracteres.';return}
+ if(!allowedRowGroups(row).includes(group)){$('#row-edit-error').textContent='Selecione uma categoria válida para esta conta.';return}
+ row.name=name;row.group=group;
+ $('#row-editor').close();render();toast('Cadastro atualizado.');
 };
