@@ -84,6 +84,17 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  assert.equal(stored.records['1-2026-0'].description,descriptionBefore);fail=false;
  await vm.runInContext("(async()=>{openEdit(1,0,2026);$('#entry-description').value='';await $('#editform').onsubmit({preventDefault(){}})})()",context);
  assert.equal(stored.records['1-2026-0'].description,'');
+ const recordsBeforeGeneral=structuredClone(stored.records);
+ await vm.runInContext("(async()=>{openRowEdit(6);$('#row-description').value='<b>Endereço</b>\\nInscrição 123';await $('#row-edit-form').onsubmit({preventDefault(){}});await loadBudget(currentUser);openRowEdit(6)})()",context);
+ assert.equal(elements['#row-description'].value,'<b>Endereço</b>\nInscrição 123');
+ assert.deepEqual(stored.records,recordsBeforeGeneral);
+ vm.runInContext('openEdit(6,0,2026)',context);
+ assert.equal(elements['#account-description-text'].textContent,'<b>Endereço</b>\nInscrição 123');assert.equal(elements['#account-description-panel'].hidden,false);
+ fail=true;
+ await vm.runInContext("(async()=>{openRowEdit(6);$('#row-description').value='Não salvo';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.rows.find(r=>r.id===6).description,'<b>Endereço</b>\nInscrição 123');fail=false;
+ await vm.runInContext("(async()=>{openRowEdit(6);$('#row-description').value='';await $('#row-edit-form').onsubmit({preventDefault(){}});openEdit(6,0,2026)})()",context);
+ assert.equal(elements['#account-description-panel'].hidden,true);
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});
