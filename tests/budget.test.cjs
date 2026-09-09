@@ -47,9 +47,11 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  fail=false;
  await vm.runInContext("(async()=>{openRowEdit(14);$('#row-name').value='Nome';$('#row-group').value='1';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
  assert.equal(stored.rows.find(r=>r.id===14).group,7);
- await vm.runInContext("(async()=>{$('#newname').value='Internet fixa';$('#group').value='1';$('#new-fixed').checked=true;$('#new-fixed-value').value='=80+20';$('#new-fixed-start').value='2026-01';$('#new-fixed-day').value='31';await $('#newform').onsubmit({preventDefault(){}})})()",context);
+ await vm.runInContext("(async()=>{$('#newname').value='Internet fixa';$('#group').value='1';await $('#newform').onsubmit({preventDefault(){}})})()",context);
  const fixedId=stored.rows.find(r=>r.name==='Internet fixa').id;
  context.fixedId=fixedId;
+ assert.equal(stored.rows.find(r=>r.id===fixedId).recurrences,undefined);
+ await vm.runInContext("(async()=>{openEdit(fixedId,0,2026);$('#value').value='=80+20';$('#due').value='2026-01-31';$('#repeat-monthly').checked=true;await $('#editform').onsubmit({preventDefault(){}})})()",context);
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),1,2026).due",context),'2026-02-28');
  assert.equal(vm.runInContext("rec(rows.find(r=>r.id===fixedId),1,2028).due",context),'2028-02-29');
  await vm.runInContext("(async()=>{openEdit(fixedId,0,2026);$('#entry-description').value='Somente janeiro';$('#status').value='paid';$('#actual').value='100';$('#paiddate').value='2026-01-31';await $('#editform').onsubmit({preventDefault(){}});openEdit(fixedId,1,2026);$('#value').value='125';await $('#editform').onsubmit({preventDefault(){}});openEdit(fixedId,2,2026);$('#entry-description').value='Plano mensal atualizado';$('#value').value='200';$('#repeat-scope').value='future';await $('#editform').onsubmit({preventDefault(){}})})()",context);
