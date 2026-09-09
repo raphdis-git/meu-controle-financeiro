@@ -95,6 +95,11 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  assert.equal(stored.rows.find(r=>r.id===6).description,'<b>Endereço</b>\nInscrição 123');fail=false;
  await vm.runInContext("(async()=>{openRowEdit(6);$('#row-description').value='';await $('#row-edit-form').onsubmit({preventDefault(){}});openEdit(6,0,2026)})()",context);
  assert.equal(elements['#account-description-panel'].hidden,true);
+ const beforeCategoryChange=structuredClone(stored.records);
+ await vm.runInContext("(async()=>{openRowEdit(1);if($('#row-group').disabled)throw Error('Income category is locked');$('#row-group').value='1';await $('#row-edit-form').onsubmit({preventDefault(){}});await loadBudget(currentUser)})()",context);
+ assert.equal(stored.rows.find(r=>r.id===1).group,1);assert.deepEqual(stored.records,beforeCategoryChange);
+ await vm.runInContext("(async()=>{openRowEdit(1);$('#row-group').value='0';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.rows.find(r=>r.id===1).group,0);assert.deepEqual(stored.records,beforeCategoryChange);
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});

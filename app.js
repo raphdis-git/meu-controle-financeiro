@@ -75,15 +75,15 @@ $('#archive-month').onclick=()=>{
  archived.add(p);render();toast('Mês arquivado. Consulte em Mostrar meses arquivados.');
 };
 
-function allowedRowGroups(row){return groups.map((_,i)=>i).filter(i=>row.group===7?i===7:row.group===0?i===0:i>0&&i<7)}
+function allowedRowGroups(row){return groups.map((_,i)=>i).filter(i=>row.group===7?i===7:i<7)}
 function openRowEdit(id){
  const row=rows.find(r=>r.id===id);if(!row)return;
  editingRowId=id;
  $('#row-editor-title').textContent=row.group===7?'Editar cartão':'Editar conta';
  $('#row-name').value=row.name;$('#row-description').value=row.description??'';
  $('#row-group').innerHTML=allowedRowGroups(row).map(i=>`<option value="${i}">${groups[i]}</option>`).join('');
- $('#row-group').value=String(row.group);$('#row-group').disabled=row.group===0||row.group===7;
- $('#row-edit-help').textContent=row.group===7?'O nome será atualizado em todas as faturas. As compras e parcelas serão preservadas.':row.group===0?'O nome será atualizado em todos os meses. Os recebimentos serão preservados.':'O nome e a categoria serão atualizados em todos os meses. Os lançamentos serão preservados.';
+ $('#row-group').value=String(row.group);$('#row-group').disabled=row.group===7;
+ $('#row-edit-help').textContent=row.group===7?'O nome será atualizado em todas as faturas. As compras e parcelas serão preservadas.':'O nome e a categoria serão atualizados em todos os meses. Mover entre renda e despesa altera os totais, preservando os valores e pagamentos.';
  $('#row-edit-error').textContent='';$('#row-editor').showModal();
 }
 $('#row-edit-cancel').onclick=()=>{$('#row-editor').close();editingRowId=null};
@@ -94,7 +94,7 @@ $('#row-edit-form').onsubmit=e=>{
  if(!name||name.length>120){$('#row-edit-error').textContent='Informe um nome de até 120 caracteres.';return}
  if(!allowedRowGroups(row).includes(group)){$('#row-edit-error').textContent='Selecione uma categoria válida para esta conta.';return}
  const description=$('#row-description').value;if(description.length>2000){$('#row-edit-error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}row.name=name;row.group=group;row.description=description;
- $('#row-editor').close();render();toast('Cadastro atualizado.');
+ const reopened=[];reopenRecurringMonths(row,reopened);$('#row-editor').close();render();toast(reopened.length?'Cadastro atualizado. Meses reabertos por pendências: '+reopened.map(periodLabel).join(', '):'Cadastro atualizado.');
 };
 
 // Restricted sums, evaluated in integer cents. Never execute user input as code.
