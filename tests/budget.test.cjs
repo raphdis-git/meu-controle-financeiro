@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');
 const elements={};let stored=null,storedRevision=0,fail=false;
 const db={auth:{onAuthStateChange(){},getSession:async()=>({data:{session:null}})},from(){return{select(){return{eq(){return{maybeSingle:async()=>({data:stored?{document:structuredClone(stored),revision:storedRevision}:null})}}}}}},rpc:async(_name,args)=>{if(fail)return{error:{message:'Network failure'}};if(args.p_revision!==storedRevision)return{error:{message:'REVISION_CONFLICT',code:'40001'}};stored=structuredClone(args.p_document);return{data:++storedRevision}}};
-const context=vm.createContext({console,Intl,Date,structuredClone,crypto:require('node:crypto').webcrypto,setTimeout:()=>{},Option:function(t,v){this.value=v},confirm:()=>true,location:{origin:'https://example.test',pathname:'/'},document:{body:{classList:{toggle(){}}},querySelector:s=>elements[s]??={value:s==='#year'?'2026':'',checked:false,innerHTML:'',textContent:'',style:{},options:[{value:'2026'},{value:'2027'}],add(o){this.options.push(o)},showModal(){this.open=true},close(){this.open=false},reset(){},reportValidity(){return true}},querySelectorAll:()=>[]},window:{supabase:{createClient:()=>db},addEventListener(){}}});
+const context=vm.createContext({console,Intl,Date,structuredClone,crypto:require('node:crypto').webcrypto,setTimeout:()=>{},Option:function(t,v){this.value=v},confirm:()=>true,location:{origin:'https://example.test',pathname:'/'},document:{body:{classList:{toggle(){}}},querySelector:s=>elements[s]??={value:s==='#year'?'2026':'',checked:false,innerHTML:'',textContent:'',style:{},classList:{add(){},remove(){}},options:[{value:'2026'},{value:'2027'}],add(o){this.options.push(o)},showModal(){this.open=true},close(){this.open=false},reset(){},reportValidity(){return true}},querySelectorAll:()=>[]},window:{supabase:{createClient:()=>db},addEventListener(){}}});
 for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),context);
 (async()=>{
  await new Promise(r=>setImmediate(r));
@@ -28,6 +28,14 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  await vm.runInContext(`(async()=>{openEdit(14,10,2026);$('#manual').value='555';await $('#editform').onsubmit({preventDefault(){}})})()`,context);
  assert.notEqual(stored.records['14-2026-10'].manual,555);assert.match(elements['#sync-status'].textContent,/Outra janela/);
  await vm.runInContext('loadBudget(currentUser)',context);
+ const recordsBeforeFormula=structuredClone(stored.records);
+ for(const [input,expected] of [['=1500+250,50+100',1850.5],['=0,10+0,20',0.3],['1.500,25',1500.25],['1500.25',1500.25],['=1.000+2.000',3000],['=0+0',0]])assert.equal(vm.runInContext(`parseExpectedValue(${JSON.stringify(input)}).value`,context),expected);
+ for(const input of ['=',' =1+','1+2','=alert(1)','=10/0','=1,234','=1++2','-10','=1e3'])assert.throws(()=>vm.runInContext(`parseExpectedValue(${JSON.stringify(input)})`,context));
+ await vm.runInContext("(async()=>{openEdit(1,0,2026);$('#value').value='=1500+250,50+100';await $('#editform').onsubmit({preventDefault(){}});await loadBudget(currentUser);openEdit(1,0,2026)})()",context);
+ assert.equal(stored.records['1-2026-0'].value,1850.5);assert.equal(elements['#value'].value,'=1500+250,50+100');
+ await vm.runInContext("(async()=>{$('#value').value='=1+';await $('#editform').onsubmit({preventDefault(){}})})()",context);assert.equal(stored.records['1-2026-0'].value,1850.5);
+ await vm.runInContext("(async()=>{$('#value').value='2000,50';await $('#editform').onsubmit({preventDefault(){}})})()",context);assert.equal(stored.records['1-2026-0'].valueFormula,null);assert.equal(stored.records['1-2026-0'].value,2000.5);
+ for(const [k,v]of Object.entries(recordsBeforeFormula))assert.deepEqual(stored.records[k],v);
  const recordsBeforeRename=structuredClone(stored.records);
  await vm.runInContext("(async()=>{openRowEdit(14);$('#row-name').value='Nubank pessoal';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
  assert.equal(stored.rows.find(r=>r.id===14).name,'Nubank pessoal');assert.deepEqual(stored.records,recordsBeforeRename);

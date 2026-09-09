@@ -30,10 +30,10 @@ function render(){
  for(const [label,filter]of[['Receitas',r=>r.group===0],['Despesas',r=>r.group!==0],['Saldo previsto',()=>true]]){h+=`<tr><th>${label}</th>`;for(const p of periods){const t=rows.filter(filter).reduce((a,r)=>a+total(r,rec(r,p%12,Math.floor(p/12)))*(label==='Saldo previsto'&&r.group!==0?-1:1),0);h+=`<td>${fmt(t)}</td>`}h+='</tr>'}
  $('#budget').innerHTML=h+'</tfoot>';document.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>openRowEdit(Number(b.dataset.editRow)));document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.row,+b.dataset.month,+b.dataset.year));
 }
-function openEdit(id,m,y=Number($('#year').value)){active={row:rows.find(r=>r.id===id),m,y};draft=structuredClone(rec(active.row,m,y));$('#title').textContent=active.row.name;$('#period').textContent=`${months[m]} de ${active.y}`;const card=active.row.group===7;$('#delete-row').textContent=card?'Excluir cartão':'Excluir conta';$('#ordinary').hidden=card;$('#cardarea').hidden=!card;$('#value').value=draft.value??'';$('#manual').value=draft.manual??'';$('#due').value=draft.due;$('#status').value=draft.paid?'paid':'open';$('#actual').value=draft.actual??'';$('#paiddate').value=draft.paiddate;$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#parts').value=1;$('#error').textContent='';payment();bill();$('#editor').showModal()}
+function openEdit(id,m,y=Number($('#year').value)){active={row:rows.find(r=>r.id===id),m,y};draft=structuredClone(rec(active.row,m,y));$('#title').textContent=active.row.name;$('#period').textContent=`${months[m]} de ${active.y}`;const card=active.row.group===7;$('#delete-row').textContent=card?'Excluir cartão':'Excluir conta';$('#ordinary').hidden=card;$('#cardarea').hidden=!card;$('#value').value=draft.valueFormula??draft.value??'';previewExpectedValue();$('#manual').value=draft.manual??'';$('#due').value=draft.due;$('#status').value=draft.paid?'paid':'open';$('#actual').value=draft.actual??'';$('#paiddate').value=draft.paiddate;$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#parts').value=1;$('#error').textContent='';payment();bill();$('#editor').showModal()}
 function payment(){$('#payment').hidden=$('#status').value!=='paid'}function bill(){if(!active||active.row.group!==7)return;const sum=draft.purchases.reduce((a,b)=>a+b.cents,0)/100;const manual=$('#manual').value;$('#billstats').innerHTML=`Compras registradas: <strong>${fmt(sum)}</strong><br>Total no orçamento: <strong>${fmt(manual===''?sum:Number(manual))}</strong>${manual!==''?`<br>Diferença a conferir: <strong>${fmt(Number(manual)-sum)}</strong>`:''}`;$('#purchases').innerHTML=draft.purchases.map(p=>`<div class="purchase"><span>${esc(p.title)} · ${p.part}/${p.parts}</span><strong>${fmt(p.cents/100)}</strong></div>`).join('')}
 $('#buy').onclick=()=>{const title=$('#purchaseTitle').value.trim(),v=Number($('#purchaseValue').value),n=Number($('#parts').value);if(!title||!Number.isFinite(v)||v<=0||!Number.isInteger(n)||n<1||n>48){$('#error').textContent='Informe a descrição, o valor e entre 1 e 48 parcelas.';return}const cents=Math.round(v*100);if(cents<n){$('#error').textContent='Cada parcela deve ter pelo menos R$ 0,01.';return}const group=crypto.randomUUID();for(let i=0;i<n;i++){const p={title,cents:Math.floor(cents/n)+(i<cents%n?1:0),part:i+1,parts:n,group,offset:i};if(i===0)draft.purchases.push(p);else(draft.future??=[]).push(p)}$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#error').textContent='';$('#status').value='open';$('#actual').value='';$('#paiddate').value='';payment();bill();toast('Compra preparada. Salve para confirmar as parcelas.')};
-$('#editform').onsubmit=e=>{e.preventDefault();const card=active.row.group===7;draft.value=$('#value').value===''?null:Number($('#value').value);draft.manual=$('#manual').value===''?null:Number($('#manual').value);draft.due=$('#due').value;draft.paid=$('#status').value==='paid';draft.actual=$('#actual').value===''?total(active.row,draft):Number($('#actual').value);draft.paiddate=$('#paiddate').value||(draft.paid?today():'');if(draft.paid&&!exists(active.row,draft)){$('#error').textContent='Informe um valor antes de marcar como pago.';return}const reopened=[];for(const p of draft.future||[]){const absolute=active.m+p.offset,y=active.y+Math.floor(absolute/12),m=absolute%12,k=key(active.row,m,String(y)),c=structuredClone(records[k]||blank());c.purchases.push(p);c.paid=false;c.actual=null;c.paiddate='';records[k]=c;if(archived.delete(y*12+m))reopened.push(y*12+m);if(!Array.from($('#year').options).some(o=>Number(o.value)===y))$('#year').add(new Option(String(y),String(y)))}delete draft.future;records[key(active.row,active.m,active.y)]=draft;if(!draft.paid&&exists(active.row,draft)&&archived.delete(active.y*12+active.m))reopened.push(active.y*12+active.m);$('#editor').close();render();toast(reopened.length?'Meses reabertos por novas pendências: '+reopened.map(periodLabel).join(', '):'Orçamento atualizado.')};
+$('#editform').onsubmit=e=>{e.preventDefault();const card=active.row.group===7;if(!card){let parsed;try{parsed=parseExpectedValue($('#value').value)}catch(error){$('#error').textContent=error.message;previewExpectedValue();return}draft.value=parsed.value;draft.valueFormula=parsed.formula;}draft.manual=$('#manual').value===''?null:Number($('#manual').value);draft.due=$('#due').value;draft.paid=$('#status').value==='paid';draft.actual=$('#actual').value===''?total(active.row,draft):Number($('#actual').value);draft.paiddate=$('#paiddate').value||(draft.paid?today():'');if(draft.paid&&!exists(active.row,draft)){$('#error').textContent='Informe um valor antes de marcar como pago.';return}const reopened=[];for(const p of draft.future||[]){const absolute=active.m+p.offset,y=active.y+Math.floor(absolute/12),m=absolute%12,k=key(active.row,m,String(y)),c=structuredClone(records[k]||blank());c.purchases.push(p);c.paid=false;c.actual=null;c.paiddate='';records[k]=c;if(archived.delete(y*12+m))reopened.push(y*12+m);if(!Array.from($('#year').options).some(o=>Number(o.value)===y))$('#year').add(new Option(String(y),String(y)))}delete draft.future;records[key(active.row,active.m,active.y)]=draft;if(!draft.paid&&exists(active.row,draft)&&archived.delete(active.y*12+active.m))reopened.push(active.y*12+active.m);$('#editor').close();render();toast(reopened.length?'Meses reabertos por novas pendências: '+reopened.map(periodLabel).join(', '):'Orçamento atualizado.')};
 $('#status').onchange=payment;$('#manual').oninput=bill;$('#close').onclick=()=>$('#editor').close();$('#year').onchange=render;$('#month').onchange=()=>{selectedMonth=Number($('#month').value);render()};$('#add').onclick=()=>$('#new').showModal();$('#cancelnew').onclick=()=>$('#new').close();$('#newform').onsubmit=e=>{e.preventDefault();const name=$('#newname').value.trim();if(!name)return;rows.push({id:Math.max(0,...rows.map(r=>r.id))+1,name,group:Number($('#group').value)});$('#new').close();$('#newform').reset();render();toast('Adicionado. Clique no mês para preencher o valor.')};render();
 
 $('#delete-row').onclick=()=>{
@@ -90,3 +90,30 @@ $('#row-edit-form').onsubmit=e=>{
  row.name=name;row.group=group;
  $('#row-editor').close();render();toast('Cadastro atualizado.');
 };
+
+// Restricted sums, evaluated in integer cents. Never execute user input as code.
+function parseExpectedValue(input){
+ const text=String(input).trim();
+ if(!text)return {value:null,formula:null};
+ if(text.length>500)throw Error('Use uma soma de até 500 caracteres.');
+ const formula=text.startsWith('=')?text:null;
+ const parts=(formula?text.slice(1):text).split('+');
+ if(!formula&&parts.length>1)throw Error('Comece com = para calcular uma soma.');
+ let cents=0;
+ for(const part of parts){
+  let number=part.trim();
+  if(!/^(?:\d+(?:,\d{1,2})?|\d+\.\d{1,2}|\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?)$/.test(number))throw Error('Confira a soma. Use apenas valores com até dois centavos separados por +. Ex.: =1500+250,50.');
+  if(number.includes(',')||/^\d{1,3}(?:\.\d{3})+$/.test(number))number=number.replaceAll('.','').replace(',','.');
+  const [whole,decimal='']=number.split('.');
+  const term=Number(whole)*100+Number(decimal.padEnd(2,'0'));
+  if(!Number.isSafeInteger(term)||!Number.isSafeInteger(cents+term))throw Error('O valor informado é muito alto.');
+  cents+=term;
+ }
+ return {value:cents/100,formula};
+}
+function previewExpectedValue(){
+ const output=$('#value-result');
+ try{const parsed=parseExpectedValue($('#value').value);output.textContent=parsed.value===null?'':`Resultado: ${fmt(parsed.value)}`;output.classList.remove('invalid')}
+ catch(error){output.textContent=error.message;output.classList.add('invalid')}
+}
+$('#value').oninput=previewExpectedValue;
