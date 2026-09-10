@@ -194,6 +194,24 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  await vm.runInContext("(async()=>{openEdit(15,2,2027);await $('#delete-future').onclick();await loadBudget(currentUser)})()",context);
  assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),2,2027))',context),0);
  assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),0,2027))',context),14.99);
+ // Purchase-level edits/deletions preserve other purchases and earlier months.
+ await vm.runInContext("(async()=>{openEdit(16,8,2026);$('#purchaseTitle').value='Serviço';$('#purchaseValue').value='10';$('#purchase-fixed').checked=true;$('#buy').onclick();$('#purchaseTitle').value='Outra compra';$('#purchaseValue').value='60';$('#purchase-fixed').checked=false;$('#parts').value='3';$('#buy').onclick();await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ const beforePurchaseEdit=structuredClone(stored);
+ await vm.runInContext("(()=>{openEdit(16,9,2026);openPurchaseEdit(draft.purchases.findIndex(p=>p.recurring),false);$('#purchase-edit-amount').value='12';$('#purchase-edit-scope').value='future';$('#purchase-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.deepEqual(stored,beforePurchaseEdit);
+ fail=true;await vm.runInContext("$('#editform').onsubmit({preventDefault(){}})",context);
+ assert.deepEqual(stored,beforePurchaseEdit);fail=false;
+ await vm.runInContext("(async()=>{await $('#editform').onsubmit({preventDefault(){}});await loadBudget(currentUser)})()",context);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),8,2026).purchases.find(p=>p.recurring).cents',context),1000);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),0,2027).purchases.find(p=>p.recurring).cents',context),1200);
+ await vm.runInContext("(async()=>{openEdit(16,9,2026);openPurchaseEdit(draft.purchases.findIndex(p=>p.recurring),true);$('#purchase-edit-form').onsubmit({preventDefault(){}});await $('#editform').onsubmit({preventDefault(){}});await loadBudget(currentUser)})()",context);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),9,2026).purchases.some(p=>p.recurring)',context),false);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),10,2026).purchases.some(p=>p.recurring)',context),true);
+ await vm.runInContext("(async()=>{openEdit(16,9,2026);openPurchaseEdit(0,true);$('#purchase-edit-scope').value='future';$('#purchase-edit-form').onsubmit({preventDefault(){}});await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),10,2026).purchases.some(p=>!p.recurring)',context),false);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),8,2026).purchases.length',context),2);
+ await vm.runInContext("(async()=>{openEdit(16,10,2026);openPurchaseEdit(0,true);$('#purchase-edit-scope').value='future';$('#purchase-edit-form').onsubmit({preventDefault(){}});await $('#editform').onsubmit({preventDefault(){}});await loadBudget(currentUser)})()",context);
+ assert.equal(vm.runInContext('rec(rows.find(r=>r.id===16),0,2027).purchases.length',context),0);
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -41,3 +41,5 @@ textarea{font:inherit;padding:10px;border:1px solid #c8d6d4;border-radius:6px;ba
  #budget thead th{padding:10px 8px}#budget .cell{font-size:13px;padding:10px 8px}#budget tfoot td{padding-left:8px;padding-right:8px}.row-heading{gap:6px}.edit-name{width:36px;height:40px;padding:8px}.sort-accounts{padding:8px 6px;font-size:11px}
  dialog{padding:18px;max-height:90vh;max-height:90svh}dialog input,dialog select,dialog textarea{font-size:16px}.footnote{line-height:1.5}
 }
+
+.purchase{flex-wrap:wrap;align-items:center;gap:8px}.purchase>span{flex:1;min-width:140px;overflow-wrap:anywhere}.purchase-actions{display:flex;gap:6px}.purchase-actions button{padding:10px;font-size:12px;min-height:40px}#purchase-edit-error{color:#a52f29;margin-bottom:12px}@media(max-width:600px){.purchase-actions{width:100%;justify-content:flex-end}}

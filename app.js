@@ -5,7 +5,7 @@ function key(r,m,y=$('#year').value){return `${r.id}-${y}-${m}`}function blank()
  const c=structuredClone(baseRec(r,m,y)),period=Number(y??$('#year').value)*12+m;
  if(c.excluded||c.paid)return c;
  for(const rule of r.cardRecurrences||[]){
-  if(period<rule.start||(rule.end!==null&&period>rule.end)||c.purchases.some(p=>p.group===rule.id))continue;
+  if((c.excludedPurchases||[]).includes(rule.id)||period<rule.start||(rule.end!==null&&period>rule.end)||c.purchases.some(p=>p.group===rule.id))continue;
   c.purchases.push({title:rule.title,cents:rule.cents,group:rule.id,recurring:true});
  }
  if(r.group!==7&&c.value===null&&c.purchases.length)c.value=c.purchases.reduce((sum,p)=>sum+p.cents,0)/100;
@@ -41,9 +41,9 @@ function render(){
  $('#budget').innerHTML=h+'</tfoot>';$('#sort-accounts').onclick=()=>sortAccounts();document.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>openRowEdit(Number(b.dataset.editRow)));document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.row,+b.dataset.month,+b.dataset.year));
 }
 function openEdit(id,m,y=Number($('#year').value)){active={row:rows.find(r=>r.id===id),m,y};draft=structuredClone(rec(active.row,m,y));$('#title').textContent=active.row.name;$('#account-description-text').textContent=active.row.description??'';$('#account-description-panel').hidden=!(active.row.description??'').trim();$('#period').textContent=`${months[m]} de ${active.y}`;const card=active.row.group===7;$('#delete-row').textContent=card?'Excluir cartão':'Excluir conta';$('#ordinary').hidden=card;$('#cardarea').hidden=!card;$('#value').value=draft.valueFormula??draft.value??'';previewExpectedValue();$('#entry-description').value=draft.description??'';$('#manual').value=draft.manual??'';$('#due').value=draft.due;$('#status').value=draft.paid?'paid':'open';$('#actual').value=draft.actual??'';$('#paiddate').value=draft.paiddate;$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#parts').value=1;$('#purchase-fixed').checked=false;purchaseRepeatControl();$('#error').textContent='';setupRepeatEditor();payment();bill();$('#editor').showModal()}
-function payment(){$('#payment').hidden=$('#status').value!=='paid'}function bill(){if(!active||active.row.group!==7)return;const sum=draft.purchases.reduce((a,b)=>a+b.cents,0)/100;const manual=$('#manual').value;$('#billstats').innerHTML=`Compras registradas: <strong>${fmt(sum)}</strong><br>Total no orçamento: <strong>${fmt(manual===''?sum:Number(manual))}</strong>${manual!==''?`<br>Diferença a conferir: <strong>${fmt(Number(manual)-sum)}</strong>`:''}`;$('#purchases').innerHTML=draft.purchases.map(p=>`<div class="purchase"><span>${esc(p.title)} · ${p.recurring?'Fixa mensal':`${p.part}/${p.parts}`}</span><strong>${fmt(p.cents/100)}</strong></div>`).join('')}
+function payment(){$('#payment').hidden=$('#status').value!=='paid'}function bill(){if(!active||active.row.group!==7)return;const sum=draft.purchases.reduce((a,b)=>a+b.cents,0)/100;const manual=$('#manual').value;$('#billstats').innerHTML=`Compras registradas: <strong>${fmt(sum)}</strong><br>Total no orçamento: <strong>${fmt(manual===''?sum:Number(manual))}</strong>${manual!==''?`<br>Diferença a conferir: <strong>${fmt(Number(manual)-sum)}</strong>`:''}`;$('#purchases').innerHTML=draft.purchases.map((p,i)=>`<div class="purchase"><span>${esc(p.title)} · ${p.recurring?'Fixa mensal':`${p.part}/${p.parts}`}</span><strong>${fmt(p.cents/100)}</strong><div class="purchase-actions"><button type="button" class="secondary" data-purchase-edit="${i}" aria-label="Editar ${esc(p.title)}">Editar</button><button type="button" class="secondary" data-purchase-delete="${i}" aria-label="Excluir ${esc(p.title)}">Excluir</button></div></div>`).join('');document.querySelectorAll('[data-purchase-edit]').forEach(b=>b.onclick=()=>openPurchaseEdit(Number(b.dataset.purchaseEdit),false));document.querySelectorAll('[data-purchase-delete]').forEach(b=>b.onclick=()=>openPurchaseEdit(Number(b.dataset.purchaseDelete),true))}
 $('#buy').onclick=()=>{const title=$('#purchaseTitle').value.trim(),v=Number($('#purchaseValue').value),fixed=$('#purchase-fixed').checked,n=fixed?1:Number($('#parts').value);if(!title||!Number.isFinite(v)||v<=0||!Number.isInteger(n)||n<1||n>48){$('#error').textContent='Informe a descrição, o valor e entre 1 e 48 parcelas.';return}const cents=Math.round(v*100);if(cents<n){$('#error').textContent='Cada parcela deve ter pelo menos R$ 0,01.';return}const group=crypto.randomUUID();if(fixed){(draft.pendingCardRules??=[]).push({id:group,title,cents,start:active.y*12+active.m,end:null});draft.purchases.push({title,cents,group,recurring:true})}else for(let i=0;i<n;i++){const p={title,cents:Math.floor(cents/n)+(i<cents%n?1:0),part:i+1,parts:n,group,offset:i};if(i===0)draft.purchases.push(p);else(draft.future??=[]).push(p)}$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#error').textContent='';$('#status').value='open';$('#actual').value='';$('#paiddate').value='';payment();bill();toast(fixed?'Cobrança fixa preparada. Salve para repetir todo mês.':'Compra preparada. Salve para confirmar as parcelas.')};
-$('#editform').onsubmit=e=>{e.preventDefault();const card=active.row.group===7;const description=$('#entry-description').value;if(description.length>2000){$('#error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}draft.description=description;if(!card){let parsed;try{parsed=parseExpectedValue($('#value').value)}catch(error){$('#error').textContent=error.message;previewExpectedValue();return}draft.value=parsed.value;draft.valueFormula=parsed.formula;}draft.manual=$('#manual').value===''?null:Number($('#manual').value);draft.due=$('#due').value;draft.paid=$('#status').value==='paid';draft.actual=$('#actual').value===''?total(active.row,draft):Number($('#actual').value);draft.paiddate=$('#paiddate').value||(draft.paid?today():'');if(draft.paid&&!exists(active.row,draft)){$('#error').textContent='Informe um valor antes de marcar como pago.';return}const reopened=[];if(!card&&!applyRepeatEdit(reopened))return;for(const p of draft.future||[]){const absolute=active.m+p.offset,y=active.y+Math.floor(absolute/12),m=absolute%12,k=key(active.row,m,String(y)),c=structuredClone(records[k]||blank());c.purchases.push(p);c.paid=false;c.actual=null;c.paiddate='';records[k]=c;if(archived.delete(y*12+m))reopened.push(y*12+m);if(!Array.from($('#year').options).some(o=>Number(o.value)===y))$('#year').add(new Option(String(y),String(y)))}delete draft.future;for(const rule of draft.pendingCardRules||[]){active.row.cardRecurrences??=[];if(!active.row.cardRecurrences.some(r=>r.id===rule.id))active.row.cardRecurrences.push(structuredClone(rule))}const savedDraft=structuredClone(draft);delete savedDraft.pendingCardRules;records[key(active.row,active.m,active.y)]=savedDraft;if(!draft.paid&&exists(active.row,draft)&&archived.delete(active.y*12+active.m))reopened.push(active.y*12+active.m);reopenRecurringMonths(active.row,reopened);$('#editor').close();render();toast(reopened.length?'Meses reabertos por novas pendências: '+reopened.map(periodLabel).join(', '):'Orçamento atualizado.')};
+$('#editform').onsubmit=e=>{e.preventDefault();const card=active.row.group===7;const description=$('#entry-description').value;if(description.length>2000){$('#error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}draft.description=description;if(!card){let parsed;try{parsed=parseExpectedValue($('#value').value)}catch(error){$('#error').textContent=error.message;previewExpectedValue();return}draft.value=parsed.value;draft.valueFormula=parsed.formula;}draft.manual=$('#manual').value===''?null:Number($('#manual').value);draft.due=$('#due').value;draft.paid=$('#status').value==='paid';draft.actual=$('#actual').value===''?total(active.row,draft):Number($('#actual').value);draft.paiddate=$('#paiddate').value||(draft.paid?today():'');if(draft.paid&&!exists(active.row,draft)){$('#error').textContent='Informe um valor antes de marcar como pago.';return}const reopened=[];if(!card&&!applyRepeatEdit(reopened))return;for(const p of draft.future||[]){const absolute=active.m+p.offset,y=active.y+Math.floor(absolute/12),m=absolute%12,k=key(active.row,m,String(y)),c=structuredClone(records[k]||blank());c.purchases.push(p);c.paid=false;c.actual=null;c.paiddate='';records[k]=c;if(archived.delete(y*12+m))reopened.push(y*12+m);if(!Array.from($('#year').options).some(o=>Number(o.value)===y))$('#year').add(new Option(String(y),String(y)))}delete draft.future;for(const rule of draft.pendingCardRules||[]){active.row.cardRecurrences??=[];if(!active.row.cardRecurrences.some(r=>r.id===rule.id))active.row.cardRecurrences.push(structuredClone(rule))}applyPurchaseOperations();const savedDraft=structuredClone(draft);delete savedDraft.pendingCardRules;delete savedDraft.purchaseOperations;records[key(active.row,active.m,active.y)]=savedDraft;if(!draft.paid&&exists(active.row,draft)&&archived.delete(active.y*12+active.m))reopened.push(active.y*12+active.m);reopenRecurringMonths(active.row,reopened);$('#editor').close();render();toast(reopened.length?'Meses reabertos por novas pendências: '+reopened.map(periodLabel).join(', '):'Orçamento atualizado.')};
 $('#status').onchange=payment;$('#manual').oninput=bill;$('#close').onclick=()=>$('#editor').close();$('#year').onchange=render;$('#month').onchange=()=>{selectedMonth=Number($('#month').value);render()};$('#add').onclick=()=>{$('#new-error').textContent='';$('#new').showModal()};$('#cancelnew').onclick=()=>$('#new').close();$('#newform').onsubmit=e=>{
  e.preventDefault();const name=$('#newname').value.trim();if(!name)return;
  rows.push({id:Math.max(0,...rows.map(r=>r.id))+1,name,group:Number($('#group').value)});
@@ -190,3 +190,47 @@ function applyRepeatEdit(reopened){
 
 function purchaseRepeatControl(){const fixed=$('#purchase-fixed').checked;$('#parts').disabled=fixed;$('#parts-label').hidden=fixed;$('#buy').textContent=fixed?'Adicionar cobrança fixa':'Adicionar compra e parcelas'}
 $('#purchase-fixed').onchange=purchaseRepeatControl;
+
+let purchaseSelection=null;
+function openPurchaseEdit(index,remove){
+ const p=draft?.purchases[index];if(!p)return;
+ purchaseSelection={index,remove};
+ $('#purchase-edit-title').textContent=remove?'Excluir compra':'Editar compra';
+ $('#purchase-edit-name').value=p.title;$('#purchase-edit-amount').value=p.cents/100;
+ $('#purchase-edit-fields').hidden=remove;
+ $('#purchase-edit-info').textContent=remove?`Excluir ${p.title}? As outras compras serão preservadas.`:'Informe o valor desta parcela ou cobrança mensal. A quantidade de parcelas será mantida.';
+ $('#purchase-edit-scope').value='current';$('#purchase-edit-scope-label').hidden=!(p.recurring||p.parts>1);
+ $('#purchase-edit-error').textContent='';$('#purchase-edit-submit').textContent=remove?'Excluir compra':'Aplicar alteração';
+ $('#purchase-editor').showModal();
+}
+$('#purchase-edit-cancel').onclick=()=>$('#purchase-editor').close();
+$('#purchase-edit-form').onsubmit=e=>{
+ e.preventDefault();if(!purchaseSelection)return;
+ const {index,remove}=purchaseSelection,p=draft.purchases[index];if(!p)return;
+ const title=$('#purchase-edit-name').value.trim(),value=Number($('#purchase-edit-amount').value),cents=Math.round(value*100);
+ if(!remove&&(!title||!Number.isFinite(value)||!Number.isSafeInteger(cents)||cents<1)){$('#purchase-edit-error').textContent='Informe a descrição e um valor maior que zero.';return}
+ const future=$('#purchase-edit-scope').value==='future'&&(p.recurring||p.parts>1);
+ if(remove){draft.purchases.splice(index,1);if(p.recurring){draft.excludedPurchases??=[];if(!draft.excludedPurchases.includes(p.group))draft.excludedPurchases.push(p.group)}}
+ else{p.title=title;p.cents=cents}
+ if(future){
+  (draft.purchaseOperations??=[]).push({group:p.group,remove,title,cents});
+  if(draft.future)draft.future=draft.future.filter(x=>!remove||x.group!==p.group).map(x=>x.group===p.group?{...x,title,cents}:x);
+ }
+ $('#purchase-editor').close();bill();toast('Alteração preparada. Clique em Salvar alterações na fatura para confirmar.');
+};
+function applyPurchaseOperations(){
+ const cutoff=active.y*12+active.m,row=active.row;
+ for(const op of draft.purchaseOperations||[]){
+  for(const [k,c] of Object.entries(records)){
+   const [id,y,m]=k.split('-').map(Number);if(id!==row.id||y*12+m<=cutoff)continue;
+   c.purchases=c.purchases.filter(p=>!op.remove||p.group!==op.group).map(p=>p.group===op.group?{...p,title:op.title,cents:op.cents}:p);
+  }
+  const next=[];
+  for(const rule of row.cardRecurrences||[]){
+   if(rule.id!==op.group||(rule.end!==null&&rule.end<cutoff)){next.push(rule);continue}
+   if(rule.start<cutoff)next.push({...rule,end:cutoff-1});
+   if(!op.remove)next.push({...rule,start:Math.max(cutoff,rule.start),title:op.title,cents:op.cents});
+  }
+  row.cardRecurrences=next;
+ }
+}
