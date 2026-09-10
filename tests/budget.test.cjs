@@ -176,6 +176,24 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  assert.ok(stored.records['1-2026-0']);fail=false;
  await vm.runInContext("(async()=>{$('#delete-row').onclick();await $('#delete-current').onclick()})()",context);
  assert.equal(stored.records['1-2026-0'],undefined);
+ // Fixed card charges repeat across years without duplicating on subsequent saves.
+ await vm.runInContext("(()=>{openEdit(15,8,2026);$('#purchaseTitle').value='Assinatura';$('#purchaseValue').value='14.99';$('#purchase-fixed').checked=true;$('#purchase-fixed').onchange();$('#buy').onclick()})()",context);
+ assert.equal(elements['#parts'].disabled,true);
+ assert.equal(stored.rows.find(r=>r.id===15).cardRecurrences,undefined);
+ fail=true;
+ await vm.runInContext("$('#editform').onsubmit({preventDefault(){}})",context);
+ assert.equal(stored.rows.find(r=>r.id===15).cardRecurrences,undefined);fail=false;
+ await vm.runInContext("(async()=>{await $('#editform').onsubmit({preventDefault(){}});await loadBudget(currentUser)})()",context);
+ assert.equal(stored.rows.find(r=>r.id===15).cardRecurrences.length,1);
+ assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),0,2028))',context),14.99);
+ await vm.runInContext("(async()=>{openEdit(15,0,2027);await $('#editform').onsubmit({preventDefault(){}});openEdit(15,0,2027);await $('#editform').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['15-2027-0'].purchases.length,1);
+ await vm.runInContext("(async()=>{openEdit(15,1,2027);await $('#delete-current').onclick()})()",context);
+ assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),1,2027))',context),0);
+ assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),2,2027))',context),14.99);
+ await vm.runInContext("(async()=>{openEdit(15,2,2027);await $('#delete-future').onclick();await loadBudget(currentUser)})()",context);
+ assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),2,2027))',context),0);
+ assert.equal(vm.runInContext('total(rows.find(r=>r.id===15),rec(rows.find(r=>r.id===15),0,2027))',context),14.99);
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});
