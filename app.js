@@ -22,13 +22,13 @@ function render(){
  for(const r of rows){const c=rec(r,selectedMonth),t=total(r,c);if(r.group===0)income+=t;else{expense+=t;if(c.paid)paid+=c.actual??t;else pending+=t}}
  $('#metrics').innerHTML=[['Receitas previstas',income,`${months[selectedMonth]} ${y}`],['Despesas previstas',expense,`Pago: ${fmt(paid)}`],['Falta pagar',pending,'Contas e faturas pendentes'],['Saldo previsto',income-expense,'Receitas menos despesas']].map(a=>`<article class="metric"><p>${a[0]}</p><strong>${fmt(a[1])}</strong><small>${a[2]}</small></article>`).join('');
  archiveControl();
- let h='<thead><tr><th>Conta / cartão</th>'+periods.map(p=>`<th class="${p===y*12+selectedMonth?'selected':''}">${months[p%12].slice(0,3)} ${Math.floor(p/12)}${archived.has(p)?'<small class="archived-label">Arquivado</small>':''}</th>`).join('')+'</tr></thead><tbody>';
- groups.forEach((g,gi)=>{h+=`<tr class="group"><th>${g.toLocaleUpperCase('pt-BR')}</th>${periods.length?`<td colspan="${periods.length}"></td>`:''}</tr>`;rows.filter(r=>r.group===gi).forEach(r=>{
- h+=`<tr><th><div class="row-heading"><span>${esc(r.name)}${recurrenceAt(r,y*12+selectedMonth)?'<small class="fixed-label">Conta fixa</small>':''}</span><button type="button" class="edit-name" data-edit-row="${r.id}" aria-label="Editar ${esc(r.name)}" title="Editar ${esc(r.name)}"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m16 3 5 5-12 12-6 1 1-6Z M13 6l5 5"/></svg></button></div></th>`;
+ let h='<thead><tr><th><div class="row-heading"><span>Conta / cartão</span><button type="button" id="sort-accounts" class="secondary sort-accounts" title="Organizar por nome dentro de cada categoria" aria-label="Organizar contas e cartões de A a Z dentro de cada categoria">A–Z ↓</button></div></th>'+periods.map(p=>`<th class="${p===y*12+selectedMonth?'selected':''}">${months[p%12].slice(0,3)} ${Math.floor(p/12)}${archived.has(p)?'<small class="archived-label">Arquivado</small>':''}</th>`).join('')+'</tr></thead><tbody>';
+ groups.forEach((g,gi)=>{h+=`<tr class="group"><th>${g.toLocaleUpperCase('pt-BR')}</th>${periods.length?`<td colspan="${periods.length}"></td>`:''}</tr>`;rows.filter(r=>r.group===gi&&(!r.hidden||$('#show-hidden').checked)).forEach(r=>{
+ h+=`<tr><th><div class="row-heading"><span>${esc(r.name)}${r.hidden?'<small class="hidden-label">Oculta</small>':''}${recurrenceAt(r,y*12+selectedMonth)?'<small class="fixed-label">Conta fixa</small>':''}</span><button type="button" class="edit-name" data-edit-row="${r.id}" aria-label="Editar ${esc(r.name)}" title="Editar ${esc(r.name)}"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m16 3 5 5-12 12-6 1 1-6Z M13 6l5 5"/></svg></button></div></th>`;
  for(const p of periods){const m=p%12,yr=Math.floor(p/12),c=rec(r,m,yr),has=exists(r,c),late=has&&!c.paid&&c.due&&c.due<today();h+=`<td class="${p===y*12+selectedMonth?'selected':''}"><button class="cell ${c.paid?'paid':late?'late':''}" data-row="${r.id}" data-month="${m}" data-year="${yr}" aria-label="${esc(r.name)}, ${periodLabel(p)}, ${has?fmt(total(r,c)):'sem lançamento'}, ${c.paid?'pago':late?'atrasado':'pendente'}">${has?`<span class="tick">${c.paid?'✓':late?'!':''}</span>${fmt(total(r,c))}`:'—'}</button></td>`}h+='</tr>'})});
  h+='</tbody><tfoot>';
  for(const [label,filter]of[['Receitas',r=>r.group===0],['Despesas',r=>r.group!==0],['Saldo previsto',()=>true]]){h+=`<tr><th>${label}</th>`;for(const p of periods){const t=rows.filter(filter).reduce((a,r)=>a+total(r,rec(r,p%12,Math.floor(p/12)))*(label==='Saldo previsto'&&r.group!==0?-1:1),0);h+=`<td>${fmt(t)}</td>`}h+='</tr>'}
- $('#budget').innerHTML=h+'</tfoot>';document.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>openRowEdit(Number(b.dataset.editRow)));document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.row,+b.dataset.month,+b.dataset.year));
+ $('#budget').innerHTML=h+'</tfoot>';$('#sort-accounts').onclick=()=>sortAccounts();document.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>openRowEdit(Number(b.dataset.editRow)));document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.row,+b.dataset.month,+b.dataset.year));
 }
 function openEdit(id,m,y=Number($('#year').value)){active={row:rows.find(r=>r.id===id),m,y};draft=structuredClone(rec(active.row,m,y));$('#title').textContent=active.row.name;$('#account-description-text').textContent=active.row.description??'';$('#account-description-panel').hidden=!(active.row.description??'').trim();$('#period').textContent=`${months[m]} de ${active.y}`;const card=active.row.group===7;$('#delete-row').textContent=card?'Excluir cartão':'Excluir conta';$('#ordinary').hidden=card;$('#cardarea').hidden=!card;$('#value').value=draft.valueFormula??draft.value??'';previewExpectedValue();$('#entry-description').value=draft.description??'';$('#manual').value=draft.manual??'';$('#due').value=draft.due;$('#status').value=draft.paid?'paid':'open';$('#actual').value=draft.actual??'';$('#paiddate').value=draft.paiddate;$('#purchaseTitle').value='';$('#purchaseValue').value='';$('#parts').value=1;$('#error').textContent='';setupRepeatEditor();payment();bill();$('#editor').showModal()}
 function payment(){$('#payment').hidden=$('#status').value!=='paid'}function bill(){if(!active||active.row.group!==7)return;const sum=draft.purchases.reduce((a,b)=>a+b.cents,0)/100;const manual=$('#manual').value;$('#billstats').innerHTML=`Compras registradas: <strong>${fmt(sum)}</strong><br>Total no orçamento: <strong>${fmt(manual===''?sum:Number(manual))}</strong>${manual!==''?`<br>Diferença a conferir: <strong>${fmt(Number(manual)-sum)}</strong>`:''}`;$('#purchases').innerHTML=draft.purchases.map(p=>`<div class="purchase"><span>${esc(p.title)} · ${p.part}/${p.parts}</span><strong>${fmt(p.cents/100)}</strong></div>`).join('')}
@@ -67,6 +67,9 @@ $('#delete-future').onclick=()=>deleteEntries(true);
 $('#delete-cancel').onclick=()=>$('#delete-dialog').close();
 
 $('#show-archived').onchange=render;
+$('#show-hidden').onchange=render;
+function sortAccounts(){rows.sort((a,b)=>a.group-b.group||a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base',numeric:true}));render();toast('Contas e cartões organizados de A a Z em cada categoria.')}
+
 $('#archive-month').onclick=()=>{
  const p=Number($('#year').value)*12+selectedMonth;
  if(archived.has(p)){archived.delete(p);render();toast('Mês reaberto.');return}
@@ -80,7 +83,7 @@ function openRowEdit(id){
  const row=rows.find(r=>r.id===id);if(!row)return;
  editingRowId=id;
  $('#row-editor-title').textContent=row.group===7?'Editar cartão':'Editar conta';
- $('#row-name').value=row.name;$('#row-description').value=row.description??'';
+ $('#row-hidden').checked=!!row.hidden;$('#row-name').value=row.name;$('#row-description').value=row.description??'';
  $('#row-group').innerHTML=allowedRowGroups(row).map(i=>`<option value="${i}">${groups[i]}</option>`).join('');
  $('#row-group').value=String(row.group);$('#row-group').disabled=row.group===7;
  $('#row-edit-help').textContent=row.group===7?'O nome será atualizado em todas as faturas. As compras e parcelas serão preservadas.':'O nome e a categoria serão atualizados em todos os meses. Mover entre renda e despesa altera os totais, preservando os valores e pagamentos.';
@@ -93,7 +96,7 @@ $('#row-edit-form').onsubmit=e=>{
  const name=$('#row-name').value.trim(),group=Number($('#row-group').value);
  if(!name||name.length>120){$('#row-edit-error').textContent='Informe um nome de até 120 caracteres.';return}
  if(!allowedRowGroups(row).includes(group)){$('#row-edit-error').textContent='Selecione uma categoria válida para esta conta.';return}
- const description=$('#row-description').value;if(description.length>2000){$('#row-edit-error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}row.name=name;row.group=group;row.description=description;
+ const description=$('#row-description').value;if(description.length>2000){$('#row-edit-error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}row.name=name;row.group=group;row.description=description;row.hidden=$('#row-hidden').checked;
  const reopened=[];reopenRecurringMonths(row,reopened);$('#row-editor').close();render();toast(reopened.length?'Cadastro atualizado. Meses reabertos por pendências: '+reopened.map(periodLabel).join(', '):'Cadastro atualizado.');
 };
 

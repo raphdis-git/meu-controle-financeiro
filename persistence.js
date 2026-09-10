@@ -36,6 +36,8 @@ async function saveMutation(action,event){
   if(currentUser?.id===uid){restore(before);syncMessage(readable(error));if(wasOpen&&!$('#editor').open)$('#editor').showModal();$('#error').textContent=readable(error);if(rowWasOpen){if(!$('#row-editor').open)$('#row-editor').showModal();$('#row-edit-error').textContent=readable(error)}}
  }finally{suppressToast=false;freeze(false)}
 }
+const sortAccountsLocally=sortAccounts;
+sortAccounts=event=>saveMutation(sortAccountsLocally,event);
 // One atomic save includes every installment, payment, deletion or archive change.
 for(const [selector,eventName] of [['#row-edit-form','onsubmit'],['#editform','onsubmit'],['#newform','onsubmit'],['#delete-current','onclick'],['#delete-future','onclick'],['#archive-month','onclick']]){
  const el=$(selector),original=el[eventName];el[eventName]=event=>saveMutation(original,event);
@@ -54,7 +56,7 @@ async function loadBudget(user){
 async function acceptSession(session){
  const user=session?.user||null;
  if(user?.id&&user.id===currentUser?.id)return;
- currentUser=user;loaded=false;revision=0;++loadGeneration;
+ $('#show-hidden').checked=false;currentUser=user;loaded=false;revision=0;++loadGeneration;
  document.querySelectorAll('dialog[open]').forEach(d=>d.close());active=null;draft=null;editingRowId=null;
  $('#workspace').hidden=!user;$('#auth-panel').hidden=!!user;$('#logout').hidden=!user;$('#user-label').textContent=user?.email||'';
  restore({rows:initialRows,records:{},archived:[]});
