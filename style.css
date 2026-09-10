@@ -21,3 +21,8 @@ textarea{font:inherit;padding:10px;border:1px solid #c8d6d4;border-radius:6px;ba
 .account-description{padding:14px;background:#edf4f1;border:1px solid #d6e5dd;border-radius:8px;margin-bottom:20px;font-size:14px}.account-description strong{display:block;margin-bottom:6px}.account-description p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
 
 .sort-accounts{font-size:12px;padding:7px 9px;white-space:nowrap}.hidden-label{display:block;font-size:12px;color:#617773;margin-top:4px}.tableheading{gap:16px;flex-wrap:wrap}
+
+/* Keep the monthly totals together while scrolling accounts. */
+#budget tfoot{position:sticky;bottom:0;z-index:3;background:#f2f7f4;box-shadow:0 -2px 0 #c8dbd1}
+#budget tfoot th,#budget tfoot td{white-space:nowrap}
+.tablewrap{scroll-padding-top:72px;scroll-padding-bottom:140px}
