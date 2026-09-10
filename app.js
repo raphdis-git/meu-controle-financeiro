@@ -11,11 +11,11 @@ function visiblePeriods(){
  for(const [k,c] of Object.entries(records)){const [,y,m]=k.split('-').map(Number);if(c.purchases.length&&y*12+m>=base)end=Math.max(end,y*12+m)}
  return Array.from({length:end-base+1},(_,i)=>base+i).filter(p=>$('#show-archived').checked||!archived.has(p));
 }
-function canArchive(p){const entries=rows.filter(r=>r.group!==0).map(r=>[r,rec(r,p%12,Math.floor(p/12))]).filter(([r,c])=>exists(r,c));return entries.length>0&&entries.every(([,c])=>c.paid)}
+function canArchive(p){const entries=rows.filter(r=>r.group!==0).map(r=>[r,rec(r,p%12,Math.floor(p/12))]).filter(([r,c])=>exists(r,c));return entries.every(([,c])=>c.paid)}
 function archiveControl(){
  const p=Number($('#year').value)*12+selectedMonth,isArchived=archived.has(p),ready=canArchive(p);
  $('#archive-month').textContent=isArchived?'Reabrir mês':'Arquivar mês';$('#archive-month').disabled=!isArchived&&!ready;
- $('#archive-message').textContent=isArchived?`${periodLabel(p)} está arquivado.`:ready?`Tudo pago em ${periodLabel(p)}. Deseja arquivar?`:`${periodLabel(p)}: quite todas as contas e faturas para arquivar.`;
+ $('#archive-message').textContent=isArchived?`${periodLabel(p)} está arquivado.`:ready?`Nenhuma conta ou fatura pendente em ${periodLabel(p)}. Deseja arquivar?`:`${periodLabel(p)}: quite todas as contas e faturas para arquivar.`;
 }
 function render(){
  const y=Number($('#year').value),periods=visiblePeriods();let income=0,expense=0,paid=0,pending=0;

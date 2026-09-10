@@ -8,7 +8,16 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  await new Promise(r=>setImmediate(r));
  await vm.runInContext("acceptSession({user:{id:'owner',email:'owner@example.test'}})",context);
  await vm.runInContext(`(async()=>{ $('#year').value='2026';openEdit(14,10,2026);$('#manual').value='100';$('#purchaseTitle').value='Teste';$('#purchaseValue').value='600';$('#parts').value='6';$('#buy').onclick();await $('#editform').onsubmit({preventDefault(){}})})()`,context);
- assert.equal(storedRevision,1);assert.equal(stored.records['14-2027-3'].purchases[0].part,6);assert.equal(stored.records['14-2026-10'].manual,100);
+ // Empty months can be archived, restored from storage and reopened.
+ const revisionBeforeArchive=storedRevision;
+ await vm.runInContext("(async()=>{selectedMonth=0;render();if($('#archive-month').disabled)throw Error('Empty month blocked');await $('#archive-month').onclick();await loadBudget(currentUser)})()",context);
+ assert.ok(stored.archived.includes(2026*12));
+ assert.equal(vm.runInContext('visiblePeriods().includes(2026*12)',context),false);
+ await vm.runInContext("$('#archive-month').onclick()",context);
+ assert.ok(!stored.archived.includes(2026*12));
+ assert.equal(storedRevision,revisionBeforeArchive+2);
+ assert.equal(vm.runInContext('canArchive(2026*12+10)',context),false);
+ assert.equal(storedRevision,3);assert.equal(stored.records['14-2027-3'].purchases[0].part,6);assert.equal(stored.records['14-2026-10'].manual,100);
  const initial=structuredClone(stored);
  fail=true;
  await vm.runInContext(`(async()=>{openEdit(14,10,2026);$('#manual').value='999';await $('#editform').onsubmit({preventDefault(){}})})()`,context);
