@@ -22,7 +22,22 @@ textarea{font:inherit;padding:10px;border:1px solid #c8d6d4;border-radius:6px;ba
 
 .sort-accounts{font-size:12px;padding:7px 9px;white-space:nowrap}.hidden-label{display:block;font-size:12px;color:#617773;margin-top:4px}.tableheading{gap:16px;flex-wrap:wrap}
 
-/* Keep the monthly totals together while scrolling accounts. */
-#budget tfoot{position:sticky;bottom:0;z-index:3;background:#f2f7f4;box-shadow:0 -2px 0 #c8dbd1}
-#budget tfoot th,#budget tfoot td{white-space:nowrap}
+/* Pin individual cells for mobile browsers that do not pin table sections. */
+#budget tfoot th,#budget tfoot td{position:sticky;bottom:0;z-index:3;white-space:nowrap;height:45px;line-height:20px;padding-top:12px;padding-bottom:12px}
+#budget tfoot tr:nth-child(1)>*{bottom:90px;box-shadow:0 -2px 0 #c8dbd1}
+#budget tfoot tr:nth-child(2)>*{bottom:45px}
+#budget tfoot th:first-child{left:0;z-index:4}
+#budget thead th{z-index:5}
+#budget thead th:first-child{z-index:6}
 .tablewrap{scroll-padding-top:72px;scroll-padding-bottom:140px}
+
+@media(max-width:600px){
+ header{gap:10px;padding:12px}.brand{font-size:20px;padding:10px}header h1{font-size:16px}header p{font-size:12px}.account{gap:6px;flex-wrap:wrap;justify-content:flex-end;font-size:11px}.account button{padding:8px 12px}
+ main{padding:18px 10px}.toolbar{gap:14px}.toolbar h2{font-size:24px}.toolbar p{line-height:1.5}.toolbar-controls{gap:8px}.toolbar-controls>button{flex-basis:100%}.toolbar-controls select{width:100%}
+ .metrics{gap:8px;margin-bottom:22px}.metric{padding:12px 10px;min-width:0}.metric strong{font-size:20px;overflow-wrap:anywhere;margin:8px 0}.metric p,.metric small{font-size:12px;line-height:1.4}
+ .tableheading{gap:12px}.tableheading p{line-height:1.5}.archivebar{padding:10px;gap:10px}.archivebar .actions{width:100%;gap:10px}.archive-toggle{line-height:1.5}.archive-toggle input{width:18px;height:18px;flex-shrink:0}.legend{gap:10px;font-size:12px}
+ .tablewrap{max-height:72vh;max-height:72svh;-webkit-overflow-scrolling:touch}
+ #budget{font-size:13px}#budget th,#budget td{min-width:108px}#budget th:first-child{min-width:150px;max-width:150px;padding-left:10px;padding-right:10px}
+ #budget thead th{padding:10px 8px}#budget .cell{font-size:13px;padding:10px 8px}#budget tfoot td{padding-left:8px;padding-right:8px}.row-heading{gap:6px}.edit-name{width:36px;height:40px;padding:8px}.sort-accounts{padding:8px 6px;font-size:11px}
+ dialog{padding:18px;max-height:90vh;max-height:90svh}dialog input,dialog select,dialog textarea{font-size:16px}.footnote{line-height:1.5}
+}
