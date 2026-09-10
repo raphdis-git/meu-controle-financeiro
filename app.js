@@ -43,7 +43,12 @@ $('#status').onchange=payment;$('#manual').oninput=bill;$('#close').onclick=()=>
 $('#delete-row').onclick=()=>{
   if(!active)return;
   const {row,m}=active;
-  $('#delete-description').textContent=`${row.name} · ${months[m]} de ${active.y}. Escolha quais lançamentos remover. Os meses anteriores e o cadastro serão preservados. Em contas fixas, excluir os próximos meses encerra a repetição. No cartão, a exclusão inclui a fatura e suas compras.`;
+  const card=row.group===7;
+  $('#delete-title').textContent=card?'Excluir cartão ou faturas':'Excluir conta ou lançamentos';
+  $('#delete-current').textContent=card?'Excluir somente a fatura deste mês':'Excluir somente o lançamento deste mês';
+  $('#delete-future').textContent=card?'Excluir faturas deste mês em diante':'Excluir lançamentos deste mês em diante';
+  $('#delete-all').textContent=card?'Excluir cartão e todo o histórico':'Excluir conta e todo o histórico';
+  $('#delete-description').textContent=`${row.name} · ${months[m]} de ${active.y}. As duas primeiras opções mantêm o cadastro e os meses anteriores. Excluir todo o histórico remove também a linha da tabela e todos os valores, pagamentos e parcelas de todos os anos. Essa exclusão não pode ser desfeita. Em contas fixas, excluir deste mês em diante encerra a repetição.`;
   $('#delete-dialog').showModal();
 };
 function deleteEntries(future){
@@ -59,9 +64,20 @@ function deleteEntries(future){
   }
   if(!future&&recurrenceAt(row,cutoff))records[key(row,m,year)]={...blank(),excluded:true};
   $('#delete-dialog').close();$('#editor').close();
-  active=null;draft=null;render();
+  render();
   toast(future?'Lançamentos deste mês em diante excluídos.':'Lançamento deste mês excluído.');
 }
+function deleteAccount(){
+  if(!active)return;
+  const index=rows.findIndex(r=>r.id===active.row.id);if(index<0)return;
+  const row=rows[index],label=row.group===7?'cartão':'conta';
+  if(!confirm(`Excluir definitivamente ${row.name}? Isso removerá o ${label} da tabela e apagará todos os valores, pagamentos e parcelas, inclusive dos meses anteriores. Esta ação não pode ser desfeita.`))return;
+  for(const k of Object.keys(records))if(Number(k.split('-')[0])===row.id)delete records[k];
+  rows.splice(index,1);
+  $('#delete-dialog').close();$('#editor').close();render();
+  toast(row.group===7?'Cartão e histórico excluídos.':'Conta e histórico excluídos.');
+}
+$('#delete-all').onclick=deleteAccount;
 $('#delete-current').onclick=()=>deleteEntries(false);
 $('#delete-future').onclick=()=>deleteEntries(true);
 $('#delete-cancel').onclick=()=>$('#delete-dialog').close();

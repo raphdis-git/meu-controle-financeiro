@@ -33,13 +33,13 @@ async function saveMutation(action,event){
   revision=Number(data);syncMessage('Todas as alterações estão salvas.');
   suppressToast=false;toast(message||'Alterações salvas.');
  }catch(error){
-  if(currentUser?.id===uid){restore(before);syncMessage(readable(error));if(wasOpen&&!$('#editor').open)$('#editor').showModal();$('#error').textContent=readable(error);if(rowWasOpen){if(!$('#row-editor').open)$('#row-editor').showModal();$('#row-edit-error').textContent=readable(error)}}
+  if(currentUser?.id===uid){restore(before);if(active)active.row=rows.find(r=>r.id===active.row.id)??active.row;syncMessage(readable(error));if(wasOpen&&!$('#editor').open)$('#editor').showModal();$('#error').textContent=readable(error);if(rowWasOpen){if(!$('#row-editor').open)$('#row-editor').showModal();$('#row-edit-error').textContent=readable(error)}}
  }finally{suppressToast=false;freeze(false)}
 }
 const sortAccountsLocally=sortAccounts;
 sortAccounts=event=>saveMutation(sortAccountsLocally,event);
 // One atomic save includes every installment, payment, deletion or archive change.
-for(const [selector,eventName] of [['#row-edit-form','onsubmit'],['#editform','onsubmit'],['#newform','onsubmit'],['#delete-current','onclick'],['#delete-future','onclick'],['#archive-month','onclick']]){
+for(const [selector,eventName] of [['#row-edit-form','onsubmit'],['#editform','onsubmit'],['#newform','onsubmit'],['#delete-all','onclick'],['#delete-current','onclick'],['#delete-future','onclick'],['#archive-month','onclick']]){
  const el=$(selector),original=el[eventName];el[eventName]=event=>saveMutation(original,event);
 }
 async function loadBudget(user){

@@ -117,6 +117,32 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  const ordered=stored.rows.map(r=>r.id);
  assert.deepEqual(ordered,[...stored.rows].sort((a,b)=>a.group-b.group||a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base',numeric:true})).map(r=>r.id));
  assert.deepEqual(stored.records,beforeHide);assert.equal(elements['#metrics'].innerHTML,metricsBeforeHide);
+ // Whole-card deletion requires confirmation and preserves other accounts.
+ await vm.runInContext("(async()=>{openEdit(14,2,2028);$('#manual').value='50';await $('#editform').onsubmit({preventDefault(){}});openEdit(14,2,2028);$('#delete-row').onclick()})()",context);
+ assert.equal(elements['#delete-dialog'].open,true);
+ assert.equal(elements['#delete-all'].textContent,'Excluir cartão e todo o histórico');
+ const beforeDeleteAll=structuredClone(stored);
+ context.confirm=()=>false;
+ await vm.runInContext("$('#delete-all').onclick()",context);
+ assert.deepEqual(stored,beforeDeleteAll);
+ context.confirm=()=>true;fail=true;
+ await vm.runInContext("$('#delete-all').onclick()",context);
+ assert.deepEqual(stored,beforeDeleteAll);
+ assert.equal(vm.runInContext('rows.some(r=>r.id===14)',context),true);
+ assert.equal(elements['#editor'].open,true);
+ fail=false;
+ await vm.runInContext("(async()=>{$('#delete-row').onclick();await $('#delete-all').onclick();await loadBudget(currentUser)})()",context);
+ assert.equal(stored.rows.some(r=>r.id===14),false);
+ assert.equal(Object.keys(stored.records).some(k=>k.startsWith('14-')),false);
+ assert.deepEqual(stored.rows,beforeDeleteAll.rows.filter(r=>r.id!==14));
+ assert.deepEqual(stored.records,Object.fromEntries(Object.entries(beforeDeleteAll.records).filter(([k])=>!k.startsWith('14-'))));
+ assert.ok(!elements['#budget'].innerHTML.includes('data-edit-row="14"'));
+ // A failed scoped deletion can also be retried from the restored editor.
+ fail=true;
+ await vm.runInContext("(async()=>{openEdit(1,0,2026);await $('#delete-current').onclick()})()",context);
+ assert.ok(stored.records['1-2026-0']);fail=false;
+ await vm.runInContext("(async()=>{$('#delete-row').onclick();await $('#delete-current').onclick()})()",context);
+ assert.equal(stored.records['1-2026-0'],undefined);
  await vm.runInContext('acceptSession(null)',context);assert.equal(vm.runInContext('Object.keys(records).length',context),0);
  console.log('PASS: durable roundtrip, payment, archive/reopen, cross-year installments, scoped deletion, failure rollback, conflict handling and logout isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});
