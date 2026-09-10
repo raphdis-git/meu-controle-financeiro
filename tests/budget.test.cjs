@@ -46,7 +46,8 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  assert.equal(vm.runInContext("rows.find(r=>r.id===14).name",context),'Nubank pessoal');assert.equal(elements['#row-editor'].open,true);
  fail=false;
  await vm.runInContext("(async()=>{openRowEdit(14);$('#row-name').value='Nome';$('#row-group').value='1';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
- assert.equal(stored.rows.find(r=>r.id===14).group,7);
+ assert.equal(stored.rows.find(r=>r.id===14).group,1);
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-group').value='7';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
  await vm.runInContext("(async()=>{$('#newname').value='Internet fixa';$('#group').value='1';await $('#newform').onsubmit({preventDefault(){}})})()",context);
  const fixedId=stored.rows.find(r=>r.name==='Internet fixa').id;
  context.fixedId=fixedId;
@@ -117,6 +118,29 @@ for(const file of ['app.js','persistence.js'])vm.runInContext(fs.readFileSync(pa
  const ordered=stored.rows.map(r=>r.id);
  assert.deepEqual(ordered,[...stored.rows].sort((a,b)=>a.group-b.group||a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base',numeric:true})).map(r=>r.id));
  assert.deepEqual(stored.records,beforeHide);assert.equal(elements['#metrics'].innerHTML,metricsBeforeHide);
+ // Every category is available; converting preserves amounts and payment history.
+ vm.runInContext('openRowEdit(1)',context);
+ assert.ok(elements['#row-group'].innerHTML.includes('value="7"'));
+ const incomeBeforeCard=structuredClone(stored.records['1-2026-0']);
+ await vm.runInContext("(async()=>{$('#row-group').value='7';await $('#row-edit-form').onsubmit({preventDefault(){}});await loadBudget(currentUser);openRowEdit(1)})()",context);
+ assert.equal(elements['#row-group'].disabled,false);
+ assert.equal(stored.records['1-2026-0'].manual,incomeBeforeCard.value);
+ assert.equal(stored.records['1-2026-0'].paid,incomeBeforeCard.paid);
+ assert.equal(stored.records['1-2026-0'].actual,incomeBeforeCard.actual);
+ await vm.runInContext("(async()=>{$('#row-group').value='0';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['1-2026-0'].value,incomeBeforeCard.value);
+ const cardBeforeConversion=structuredClone(stored.records['14-2026-10']);
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-group').value='4';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['14-2026-10'].value,cardBeforeConversion.manual);
+ assert.deepEqual(stored.records['14-2026-10'].purchases,cardBeforeConversion.purchases);
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-group').value='7';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.equal(stored.records['14-2026-10'].manual,cardBeforeConversion.manual);
+ // Unmaterialized fixed payments keep their amounts when moved to cards.
+ vm.runInContext("(()=>{const r={id:999,group:1,recurrences:[{start:2026*12,end:null,value:87,day:10}]};changeRowGroup(r,7);if(total(r,rec(r,3,2026))!==87)throw Error('Recurring value lost')})()",context);
+ fail=true;
+ const beforeFailedConversion=structuredClone(stored);
+ await vm.runInContext("(async()=>{openRowEdit(14);$('#row-group').value='4';await $('#row-edit-form').onsubmit({preventDefault(){}})})()",context);
+ assert.deepEqual(stored,beforeFailedConversion);assert.equal(vm.runInContext('rows.find(r=>r.id===14).group',context),7);fail=false;
  // Whole-card deletion requires confirmation and preserves other accounts.
  await vm.runInContext("(async()=>{openEdit(14,2,2028);$('#manual').value='50';await $('#editform').onsubmit({preventDefault(){}});openEdit(14,2,2028);$('#delete-row').onclick()})()",context);
  assert.equal(elements['#delete-dialog'].open,true);

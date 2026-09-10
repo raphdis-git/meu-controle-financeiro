@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),fmt=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];const groups=['Renda familiar','Habitação','Saúde','Automóvel','Outras despesas','Lazer','Investimentos e compromissos','Cartões de crédito'];let selectedMonth=new Date().getMonth(),active=null,draft=null,editingRowId=null;const records={};const archived=new Set();
 const rows=[['Salário Raphael',0,4200],['Salário Aira',0,2800],['Condomínio Apartamento',1,380],['Equatorial Apartamento',1,165],['Saneago Apartamento',1,85],['Internet',1,100],['Amil Dental Raphael',2,65],['Combustível',3,180],['IPVA Moto',3,55],['Academia / CrossFit',4,150],['Reserva de emergência',4,300],['Lanche',5,120],['Financiamento Apartamento',6,1100],['Nubank Raphael',7,450],['Nubank Aira',7,320],['BMG',7,140],['Renner',7,80],['Mercado Pago',7,180],['Caixa',7,210]].map((r,i)=>({id:i+1,name:r[0],group:r[1],example:r[2]}));
-function key(r,m,y=$('#year').value){return `${r.id}-${y}-${m}`}function blank(){return{value:null,description:'',manual:null,paid:false,actual:null,due:'',paiddate:'',purchases:[]}}function rec(r,m,y){const saved=records[key(r,m,y)];if(saved)return saved;const period=Number(y??$('#year').value)*12+m,rule=recurrenceAt(r,period);return rule?{...blank(),value:rule.value,valueFormula:rule.formula,description:rule.description??'',due:recurringDue(period,rule.day)}:blank()}function total(r,c){return r.group===7?(c.manual!==null?c.manual:c.purchases.reduce((a,b)=>a+b.cents,0)/100):c.value??0}function exists(r,c){return r.group===7?c.manual!==null||c.purchases.length>0:c.value!==null}function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}let suppressToast=false,lastToast='';function toast(t){if(suppressToast){lastToast=t;return}$('#toast').textContent=t;$('#toast').style.display='block';setTimeout(()=>$('#toast').style.display='none',2400)}
+function key(r,m,y=$('#year').value){return `${r.id}-${y}-${m}`}function blank(){return{value:null,description:'',manual:null,paid:false,actual:null,due:'',paiddate:'',purchases:[]}}function rec(r,m,y){const saved=records[key(r,m,y)];if(saved)return saved;const period=Number(y??$('#year').value)*12+m,rule=recurrenceAt(r,period);return rule?{...blank(),value:rule.value,manual:r.group===7?rule.value:null,valueFormula:rule.formula,description:rule.description??'',due:recurringDue(period,rule.day)}:blank()}function total(r,c){return r.group===7?(c.manual!==null?c.manual:c.purchases.reduce((a,b)=>a+b.cents,0)/100):c.value??0}function exists(r,c){return r.group===7?c.manual!==null||c.purchases.length>0:c.value!==null}function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}let suppressToast=false,lastToast='';function toast(t){if(suppressToast){lastToast=t;return}$('#toast').textContent=t;$('#toast').style.display='block';setTimeout(()=>$('#toast').style.display='none',2400)}
 const currentYear=new Date().getFullYear();$('#year').innerHTML=Array.from({length:8},(_,i)=>currentYear-2+i).map(y=>`<option>${y}</option>`).join('');$('#year').value=String(currentYear);
 $('#month').innerHTML=months.map((m,i)=>`<option value="${i}">${m}</option>`).join('');$('#month').value=selectedMonth;$('#group').innerHTML=groups.map((g,i)=>`<option value="${i}">${g}</option>`).join('');
 function periodLabel(p){return `${months[p%12]} de ${Math.floor(p/12)}`}
@@ -94,15 +94,25 @@ $('#archive-month').onclick=()=>{
  archived.add(p);render();toast('Mês arquivado. Consulte em Mostrar meses arquivados.');
 };
 
-function allowedRowGroups(row){return groups.map((_,i)=>i).filter(i=>row.group===7?i===7:i<7)}
+function allowedRowGroups(){return groups.map((_,i)=>i)}
+function changeRowGroup(row,group){
+ if((row.group===7)!==(group===7)){
+  for(const [k,c] of Object.entries(records)){
+   if(Number(k.split('-')[0])!==row.id)continue;
+   const value=exists(row,c)?total(row,c):null;
+   if(group===7)c.manual=value;else{c.value=value;c.valueFormula=null}
+  }
+ }
+ row.group=group;
+}
 function openRowEdit(id){
  const row=rows.find(r=>r.id===id);if(!row)return;
  editingRowId=id;
  $('#row-editor-title').textContent=row.group===7?'Editar cartão':'Editar conta';
  $('#row-hidden').checked=!!row.hidden;$('#row-name').value=row.name;$('#row-description').value=row.description??'';
  $('#row-group').innerHTML=allowedRowGroups(row).map(i=>`<option value="${i}">${groups[i]}</option>`).join('');
- $('#row-group').value=String(row.group);$('#row-group').disabled=row.group===7;
- $('#row-edit-help').textContent=row.group===7?'O nome será atualizado em todas as faturas. As compras e parcelas serão preservadas.':'O nome e a categoria serão atualizados em todos os meses. Mover entre renda e despesa altera os totais, preservando os valores e pagamentos.';
+ $('#row-group').value=String(row.group);$('#row-group').disabled=false;
+ $('#row-edit-help').textContent='A categoria será atualizada em todos os meses. Ao mudar entre conta e cartão, os valores, pagamentos e parcelas serão preservados. Mover entre renda e despesa altera os totais.';
  $('#row-edit-error').textContent='';$('#row-editor').showModal();
 }
 $('#row-edit-cancel').onclick=()=>{$('#row-editor').close();editingRowId=null};
@@ -112,7 +122,7 @@ $('#row-edit-form').onsubmit=e=>{
  const name=$('#row-name').value.trim(),group=Number($('#row-group').value);
  if(!name||name.length>120){$('#row-edit-error').textContent='Informe um nome de até 120 caracteres.';return}
  if(!allowedRowGroups(row).includes(group)){$('#row-edit-error').textContent='Selecione uma categoria válida para esta conta.';return}
- const description=$('#row-description').value;if(description.length>2000){$('#row-edit-error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}row.name=name;row.group=group;row.description=description;row.hidden=$('#row-hidden').checked;
+ const description=$('#row-description').value;if(description.length>2000){$('#row-edit-error').textContent='A descrição deve ter no máximo 2.000 caracteres.';return}changeRowGroup(row,group);row.name=name;row.description=description;row.hidden=$('#row-hidden').checked;
  const reopened=[];reopenRecurringMonths(row,reopened);$('#row-editor').close();render();toast(reopened.length?'Cadastro atualizado. Meses reabertos por pendências: '+reopened.map(periodLabel).join(', '):'Cadastro atualizado.');
 };
 
